@@ -1,19 +1,18 @@
-mod state;
-mod vertex;
-mod texture;
-mod texture_array;
-mod math;
 mod camera;
 mod input;
+mod math;
+mod state;
+mod texture;
+mod texture_array;
+mod vertex;
 
-use std::thread::current;
 use std::time::Instant;
 
+use crate::state::State;
 use winit::dpi::{LogicalPosition, LogicalSize};
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use winit::event::{Event, WindowEvent, DeviceEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
-use crate::state::State;
 
 const WINDOW_WIDTH: f32 = 640.0;
 const WINDOW_HEIGHT: f32 = 480.0;
@@ -38,10 +37,13 @@ pub async fn run() {
             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
             WindowEvent::Resized(physical_size) => {
                 state.resize(*physical_size);
-            },
+            }
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                 state.resize(**new_inner_size);
-            }
+            },
+            WindowEvent::MouseInput { button, .. } => {
+                state.mouse_input(*button);
+            },
             _ => {}
         },
         Event::RedrawRequested(window_id) if window_id == state.window().id() => {
@@ -56,6 +58,12 @@ pub async fn run() {
                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                 Err(_) => {}
             }
+        }
+        Event::DeviceEvent { event, .. } => match event {
+            DeviceEvent::MouseMotion { delta } => {
+                state.mouse_motion(delta.0 as f32, delta.1 as f32);
+            }
+            _ => {}
         }
         Event::MainEventsCleared => {
             state.window().request_redraw();

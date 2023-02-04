@@ -1,12 +1,11 @@
+/*
 pub struct Vec3 {
     values: [f32; 3],
 }
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self {
-            values: [x, y, z],
-        }
+        Self { values: [x, y, z] }
     }
 
     pub fn zero() -> Self {
@@ -22,11 +21,16 @@ impl Vec3 {
     }
 
     pub fn dot(&self, other: &Vec3) -> f32 {
-        self.values[0] * other.values[0] + self.values[1] * other.values[1] + self.values[2] * other.values[2]
+        self.values[0] * other.values[0]
+            + self.values[1] * other.values[1]
+            + self.values[2] * other.values[2]
     }
 
     pub fn normalized(&self) -> Self {
-        let magnitude = (self.values[0] * self.values[0] + self.values[1] * self.values[1] + self.values[2] * self.values[2]).sqrt();
+        let magnitude = (self.values[0] * self.values[0]
+            + self.values[1] * self.values[1]
+            + self.values[2] * self.values[2])
+            .sqrt();
 
         Vec3::new(
             self.values[0] / magnitude,
@@ -108,8 +112,8 @@ impl Mat4 {
                 [0.0, 0.0, 0.0, 0.0],
                 [0.0, 0.0, 0.0, 0.0],
                 [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0]
-            ]
+                [0.0, 0.0, 0.0, 0.0],
+            ],
         }
     }
 
@@ -156,3 +160,4 @@ impl Mat4 {
         mat
     }
 }
+*/

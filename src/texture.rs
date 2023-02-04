@@ -144,7 +144,7 @@ impl Texture {
             usage: wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST
                 | extra_usages,
-            view_formats: &[format]
+            view_formats: &[format],
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
