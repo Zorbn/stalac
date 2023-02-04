@@ -1,0 +1,16 @@
+[package]
+name = "stalac"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.28"
+wgpu = "0.15"
+pollster = "0.2"
+bytemuck = { version = "1.13", features = [ "derive" ] }
+cgmath = "0.18"
+
+[dependencies.image]
+version = "0.24"
+default-features = false
+features = ["png", "jpeg"]
