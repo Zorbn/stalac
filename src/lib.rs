@@ -1,6 +1,8 @@
 mod camera;
 mod input;
+mod instance;
 mod math;
+mod model;
 mod state;
 mod texture;
 mod texture_array;
@@ -10,7 +12,7 @@ use std::time::Instant;
 
 use crate::state::State;
 use winit::dpi::{LogicalPosition, LogicalSize};
-use winit::event::{Event, WindowEvent, DeviceEvent};
+use winit::event::{DeviceEvent, Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
@@ -40,10 +42,10 @@ pub async fn run() {
             }
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                 state.resize(**new_inner_size);
-            },
+            }
             WindowEvent::MouseInput { button, .. } => {
                 state.mouse_input(*button);
-            },
+            }
             _ => {}
         },
         Event::RedrawRequested(window_id) if window_id == state.window().id() => {
@@ -64,7 +66,7 @@ pub async fn run() {
                 state.mouse_motion(delta.0 as f32, delta.1 as f32);
             }
             _ => {}
-        }
+        },
         Event::MainEventsCleared => {
             state.window().request_redraw();
         }

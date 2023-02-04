@@ -88,7 +88,11 @@ impl Camera {
     }
 
     pub fn get_direction_vec(direction: f32) -> cgmath::Vector3<f32> {
-        cgmath::Vector3::new(direction.to_radians().sin(), 0.0, direction.to_radians().cos())
+        cgmath::Vector3::new(
+            direction.to_radians().sin(),
+            0.0,
+            direction.to_radians().cos(),
+        )
     }
 
     pub fn rotate(&mut self, delta_x: f32, delta_y: f32) {

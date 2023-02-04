@@ -1,5 +1,8 @@
 use std::collections::HashSet;
-use winit::{event::{ElementState, VirtualKeyCode, MouseButton}, window::{Window, CursorGrabMode}};
+use winit::{
+    event::{ElementState, MouseButton, VirtualKeyCode},
+    window::{CursorGrabMode, Window},
+};
 
 pub struct Input {
     pressed_keys: HashSet<VirtualKeyCode>,

@@ -1,13 +1,15 @@
 use crate::camera::{Camera, CameraPerspectiveProjection};
 use crate::input::Input;
-use crate::texture::{Texture, self};
+use crate::instance::{Instance, InstanceRaw};
+use crate::model::Model;
+use crate::texture::{self, Texture};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
+use cgmath::Zero;
 use std::iter::once;
-use wgpu::util::DeviceExt;
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
-use winit::event::{KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton};
+use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 use winit::window::Window;
 
 const VERTICES: &[Vertex] = &[
@@ -37,7 +39,6 @@ const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
 
 /*
  * TODO:
- * Model struct to hold vertex/index data/buffers for drawing and updating them.
  * Orthographic camera/ ui
  */
 
@@ -50,11 +51,11 @@ pub struct State {
     config: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
     diffuse_texture_array: TextureArray,
     depth_texture: Texture,
     camera: Camera,
+    model: Model,
+    model2: Model,
 }
 
 impl State {
@@ -137,7 +138,8 @@ impl State {
                 push_constant_ranges: &[],
             });
 
-        let depth_texture = Texture::create_depth_texture(&device, config.width, config.height, "depth_texture");
+        let depth_texture =
+            Texture::create_depth_texture(&device, config.width, config.height, "depth_texture");
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -145,7 +147,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -180,17 +182,25 @@ impl State {
             multiview: None,
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
+        let mut model = Model::new(&device, VERTICES, INDICES);
+        let instances = vec![Instance {
+            position: cgmath::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::zero(),
+        }, Instance {
+            position: cgmath::Vector3 {
+                x: 1.0,
+                y: 1.0,
+                z: -1.0,
+            },
+            rotation: cgmath::Quaternion::zero(),
+        }];
+        model.update_instances(&device, &instances);
 
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
+        let model2 = Model::new(&device, VERTICES, INDICES);
 
         let input = Input::new();
 
@@ -203,11 +213,11 @@ impl State {
             config,
             size,
             render_pipeline,
-            vertex_buffer,
-            index_buffer,
             diffuse_texture_array,
             depth_texture,
             camera,
+            model,
+            model2,
         }
     }
 
@@ -229,7 +239,12 @@ impl State {
         self.config.height = new_size.height;
         self.surface.configure(&self.device, &self.config);
         self.camera.resize(self.config.width, self.config.height);
-        self.depth_texture = Texture::create_depth_texture(&self.device, self.config.width, self.config.height, "depth_texture");
+        self.depth_texture = Texture::create_depth_texture(
+            &self.device,
+            self.config.width,
+            self.config.height,
+            "depth_texture",
+        );
     }
 
     pub fn input(&mut self, event: &WindowEvent) -> bool {
@@ -338,9 +353,11 @@ impl State {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, self.diffuse_texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.camera.bind_group(), &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..(INDICES.len() as u32), 0, 0..1);
+
+            render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
+            render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
+            render_pass.draw_indexed(0..self.model.num_indices(), 0, 0..self.model.num_instances());
         }
 
         self.queue.submit(once(encoder.finish()));
