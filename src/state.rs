@@ -1,6 +1,6 @@
 use crate::camera::{Camera, CameraPerspectiveProjection};
 use crate::input::Input;
-use crate::texture::Texture;
+use crate::texture::{Texture, self};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
 use std::iter::once;
@@ -37,7 +37,6 @@ const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
 
 /*
  * TODO:
- * Depth buffer
  * Model struct to hold vertex/index data/buffers for drawing and updating them.
  * Orthographic camera/ ui
  */
@@ -54,6 +53,7 @@ pub struct State {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     diffuse_texture_array: TextureArray,
+    depth_texture: Texture,
     camera: Camera,
 }
 
@@ -137,6 +137,8 @@ impl State {
                 push_constant_ranges: &[],
             });
 
+        let depth_texture = Texture::create_depth_texture(&device, config.width, config.height, "depth_texture");
+
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -163,7 +165,13 @@ impl State {
                 unclipped_depth: false,
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: texture::Texture::DEPTH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,
@@ -198,6 +206,7 @@ impl State {
             vertex_buffer,
             index_buffer,
             diffuse_texture_array,
+            depth_texture,
             camera,
         }
     }
@@ -220,6 +229,7 @@ impl State {
         self.config.height = new_size.height;
         self.surface.configure(&self.device, &self.config);
         self.camera.resize(self.config.width, self.config.height);
+        self.depth_texture = Texture::create_depth_texture(&self.device, self.config.width, self.config.height, "depth_texture");
     }
 
     pub fn input(&mut self, event: &WindowEvent) -> bool {
@@ -315,7 +325,14 @@ impl State {
                         store: true,
                     },
                 })],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view(),
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
