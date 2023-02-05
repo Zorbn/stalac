@@ -10,7 +10,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new(device: &wgpu::Device, vertex_array: &[Vertex], index_array: &[u16]) -> Self {
+    pub fn new(device: &wgpu::Device, vertex_array: &[Vertex], index_array: &[u32]) -> Self {
         let vertices = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(vertex_array),

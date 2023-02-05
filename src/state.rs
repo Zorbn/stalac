@@ -1,4 +1,5 @@
 use crate::camera::{Camera, CameraPerspectiveProjection};
+use crate::chunk::Chunk;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
@@ -40,7 +41,7 @@ const VERTICES: &[Vertex] = &[
     },
 ];
 
-const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+const INDICES: &[u32] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
 
 /*
  * TODO:
@@ -61,6 +62,8 @@ pub struct State {
     camera: Camera,
     model: Model,
     model2: Model,
+    chunk: Chunk,
+    chunk_model: Model,
 }
 
 impl State {
@@ -126,7 +129,7 @@ impl State {
             &device,
             CameraPerspectiveProjection::new(
                 (0.0, 0.0, 2.0).into(),
-                45.0,
+                90.0,
                 0.1,
                 100.0,
                 config.width,
@@ -189,33 +192,53 @@ impl State {
         });
 
         let mut model = Model::new(&device, VERTICES, INDICES);
-        let instances = vec![Instance {
-            position: cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
+        let instances = vec![
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::zero(),
             },
-            rotation: cgmath::Quaternion::zero(),
-        }, Instance {
-            position: cgmath::Vector3 {
-                x: 1.0,
-                y: 1.0,
-                z: -1.0,
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 1.0,
+                    y: 1.0,
+                    z: -1.0,
+                },
+                rotation: cgmath::Quaternion::zero(),
             },
-            rotation: cgmath::Quaternion::zero(),
-        }, Instance {
-            position: cgmath::Vector3 {
-                x: 1.0,
-                y: 1.0,
-                z: 10.0,
+            Instance {
+                position: cgmath::Vector3 {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 10.0,
+                },
+                rotation: cgmath::Quaternion::zero(),
             },
-            rotation: cgmath::Quaternion::zero(),
-        }];
+        ];
         model.update_instances(&device, &instances);
 
         let model2 = Model::new(&device, VERTICES, INDICES);
 
         let input = Input::new();
+
+        let mut chunk = Chunk::new();
+        chunk.generate_blocks();
+        let (chunk_verts, chunk_inds) = chunk.generate_mesh();
+        let mut chunk_model = Model::new(&device, &chunk_verts, &chunk_inds);
+        chunk_model.update_instances(
+            &device,
+            &vec![Instance {
+                position: cgmath::Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                rotation: cgmath::Quaternion::zero(),
+            }],
+        );
 
         Self {
             window,
@@ -231,6 +254,8 @@ impl State {
             camera,
             model,
             model2,
+            chunk,
+            chunk_model,
         }
     }
 
@@ -367,10 +392,17 @@ impl State {
             render_pass.set_bind_group(0, self.diffuse_texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.camera.bind_group(), &[]);
 
-            render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
-            render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
-            render_pass.draw_indexed(0..self.model.num_indices(), 0, 0..self.model.num_instances());
+            render_pass.set_vertex_buffer(0, self.chunk_model.vertices().slice(..));
+            render_pass.set_index_buffer(
+                self.chunk_model.indices().slice(..),
+                wgpu::IndexFormat::Uint32,
+            );
+            render_pass.set_vertex_buffer(1, self.chunk_model.instances().slice(..));
+            render_pass.draw_indexed(
+                0..self.chunk_model.num_indices(),
+                0,
+                0..self.chunk_model.num_instances(),
+            );
         }
 
         self.queue.submit(once(encoder.finish()));

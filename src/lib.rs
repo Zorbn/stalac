@@ -1,4 +1,7 @@
 mod camera;
+mod chunk;
+mod cube_mesh;
+mod direction;
 mod input;
 mod instance;
 mod math;
