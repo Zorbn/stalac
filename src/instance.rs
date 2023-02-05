@@ -1,3 +1,5 @@
+use cgmath::prelude::*;
+
 pub struct Instance {
     pub position: cgmath::Vector3<f32>,
     pub rotation: cgmath::Quaternion<f32>,
@@ -10,6 +12,11 @@ impl Instance {
                 * cgmath::Matrix4::from(self.rotation))
             .into(),
         }
+    }
+
+    pub fn rotate_towards(&mut self, target: &cgmath::Vector3<f32>) {
+        let angle = cgmath::Rad((target.x - self.position.x).atan2(target.z - self.position.z));
+        self.rotation = cgmath::Quaternion::from_angle_y(angle);
     }
 }
 

@@ -53,5 +53,13 @@ var s_diffuse_array: binding_array<sampler>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse_array[in.tex_index], s_diffuse_array[in.tex_index], in.tex_coords) / (abs(in.light_level) + 1.0);
+    let color = textureSample(t_diffuse_array[in.tex_index], s_diffuse_array[in.tex_index], in.tex_coords);
+
+    if color.a < 0.5 {
+        discard;
+    }
+
+    let lit_color = vec4(color.rgb / (abs(in.light_level) + 1.0), color.a);
+
+    return lit_color;
 }

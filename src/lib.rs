@@ -12,6 +12,7 @@ mod texture_array;
 mod vertex;
 mod bytes;
 mod rng;
+mod sprite_mesh;
 
 use std::time::Instant;
 

@@ -4,10 +4,11 @@ use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
 use crate::rng::Rng;
+use crate::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
 use crate::texture::{self, Texture};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
-use cgmath::Zero;
+use cgmath::prelude::*;
 use std::iter::once;
 use std::time::{UNIX_EPOCH, SystemTime};
 use wgpu::Features;
@@ -15,35 +16,35 @@ use winit::dpi::PhysicalSize;
 use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 use winit::window::Window;
 
-const VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [-0.0868241, 0.49240386, 0.0],
-        tex_coords: [0.4131759, 0.99240386],
-        tex_index: 0,
-    },
-    Vertex {
-        position: [-0.49513406, 0.06958647, 0.0],
-        tex_coords: [0.0048659444, 0.56958647],
-        tex_index: 0,
-    },
-    Vertex {
-        position: [-0.21918549, -0.44939706, 0.0],
-        tex_coords: [0.28081453, 0.05060294],
-        tex_index: 0,
-    },
-    Vertex {
-        position: [0.35966998, -0.3473291, 0.0],
-        tex_coords: [0.85967, 0.1526709],
-        tex_index: 0,
-    },
-    Vertex {
-        position: [0.44147372, 0.2347359, 0.0],
-        tex_coords: [0.9414737, 0.7347359],
-        tex_index: 0,
-    },
-];
+// const VERTICES: &[Vertex] = &[
+//     Vertex {
+//         position: [-0.0868241, 0.49240386, 0.0],
+//         tex_coords: [0.4131759, 0.99240386],
+//         tex_index: 0,
+//     },
+//     Vertex {
+//         position: [-0.49513406, 0.06958647, 0.0],
+//         tex_coords: [0.0048659444, 0.56958647],
+//         tex_index: 0,
+//     },
+//     Vertex {
+//         position: [-0.21918549, -0.44939706, 0.0],
+//         tex_coords: [0.28081453, 0.05060294],
+//         tex_index: 0,
+//     },
+//     Vertex {
+//         position: [0.35966998, -0.3473291, 0.0],
+//         tex_coords: [0.85967, 0.1526709],
+//         tex_index: 0,
+//     },
+//     Vertex {
+//         position: [0.44147372, 0.2347359, 0.0],
+//         tex_coords: [0.9414737, 0.7347359],
+//         tex_index: 0,
+//     },
+// ];
 
-const INDICES: &[u32] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+// const INDICES: &[u32] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
 
 /*
  * TODO:
@@ -192,7 +193,7 @@ impl State {
             multiview: None,
         });
 
-        let mut model = Model::new(&device, VERTICES, INDICES);
+        let mut model = Model::new(&device, SPRITE_VERTICES, SPRITE_INDICES);
         let instances = vec![
             Instance {
                 position: cgmath::Vector3 {
@@ -221,7 +222,7 @@ impl State {
         ];
         model.update_instances(&device, &instances);
 
-        let model2 = Model::new(&device, VERTICES, INDICES);
+        let model2 = Model::new(&device, SPRITE_VERTICES, SPRITE_INDICES);
 
         let input = Input::new();
 
@@ -403,6 +404,32 @@ impl State {
                     0..model.num_instances(),
                 );
             }
+
+            let instance_pos = cgmath::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
+            let mut instances = vec![
+                Instance {
+                    position: instance_pos,
+                    rotation: cgmath::Quaternion::zero(),
+                },
+            ];
+            instances[0].rotate_towards(&self.camera.position());
+
+            self.model.update_instances(&self.device, &instances);
+            render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
+            render_pass.set_index_buffer(
+                self.model.indices().slice(..),
+                wgpu::IndexFormat::Uint32,
+            );
+            render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
+            render_pass.draw_indexed(
+                0..self.model.num_indices(),
+                0,
+                0..self.model.num_instances(),
+            );
         }
 
         self.queue.submit(once(encoder.finish()));

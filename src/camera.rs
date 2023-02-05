@@ -109,6 +109,10 @@ impl Camera {
         self.projection.target = cgmath::Point3::new(new_target.x, new_target.y, new_target.z);
     }
 
+    pub fn position(&self) -> cgmath::Vector3<f32> {
+        self.projection.eye.to_vec()
+    }
+
     pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
         &self.bind_group_layout
     }
