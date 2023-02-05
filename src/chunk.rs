@@ -157,4 +157,31 @@ impl Chunk {
 
         None
     }
+
+    pub fn get_spawn_position(&self, rng: &mut Rng) -> Option<cgmath::Vector3<f32>> {
+        let i_chunk_len = CHUNK_LEN as i32;
+        let i_chunk_size = CHUNK_SIZE as i32;
+        let i_chunk_height = CHUNK_HEIGHT as i32;
+
+        let start_i = rng.range(CHUNK_LEN as u32) as i32;
+
+        for offset_i in 0..i_chunk_len {
+            let i = (start_i + offset_i) % i_chunk_len;
+            let x = i % i_chunk_size;
+            let y = (i / i_chunk_size) % i_chunk_height;
+            let z = i / (i_chunk_size * i_chunk_height);
+
+            if self.get_block(x, y, z) {
+                continue;
+            }
+
+            return Some(cgmath::Vector3::new(
+                (x as f32 + 0.5) * BLOCK_SIZE,
+                (y as f32 + 0.5) * BLOCK_SIZE,
+                (z as f32 + 0.5) * BLOCK_SIZE,
+            ));
+        }
+
+        None
+    }
 }

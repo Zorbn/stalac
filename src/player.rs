@@ -103,6 +103,10 @@ impl Player {
         self.look_x = self.look_x.clamp(-89.0, 89.0);
     }
 
+    pub fn teleport(&mut self, position: cgmath::Vector3<f32>) {
+        self.position = position;
+    }
+
     pub fn position(&self) -> cgmath::Vector3<f32> {
         self.position
     }

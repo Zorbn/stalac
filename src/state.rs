@@ -20,6 +20,11 @@ use winit::window::Window;
 /*
  * TODO:
  * Orthographic camera/ ui
+ * For collisions, consider building a grid of buckets that entities can be placed in:
+ * Entities are stored in a hashmap with an id,
+ * As entities move, they are placed into buckets based on their approximate position and removed from the one they used to be in if necessary,
+ * To find what entities to check against for collisions an entity can get all the entity ids in the 3x3 of buckets surrounding them, and find
+ * the entities they need based on their ids.
  */
 
 pub struct State {
@@ -200,7 +205,11 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
-        let player = Player::new(cgmath::Vector3::new(0.0, 200.0, 0.0), cgmath::Vector3::new(0.5, 0.8, 0.5), 4.0);
+        let mut player = Player::new(cgmath::Vector3::zero(), cgmath::Vector3::new(0.5, 0.8, 0.5), 4.0);
+
+        if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
+            player.teleport(player_spawn);
+        }
 
         Self {
             window,
