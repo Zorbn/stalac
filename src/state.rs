@@ -207,7 +207,7 @@ impl State {
         chunk.generate_mesh(&device);
 
         let player_ai = Box::new(PlayerAi{}); // TODO: Create a registry struct that creates and stores this type of object.
-        let mut player = Entity::new(cgmath::Vector3::zero(), cgmath::Vector3::new(0.5, 0.8, 0.5), 4.0, Some(player_ai));
+        let mut player = Entity::new(cgmath::Vector3::zero(), cgmath::Vector3::new(0.5, 0.8, 0.5), 6.0, Some(player_ai));
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
             player.actor.teleport(player_spawn);

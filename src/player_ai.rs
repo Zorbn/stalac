@@ -30,17 +30,7 @@ impl Ai for PlayerAi {
             dir_x -= 1.0;
         }
 
-        let grounded = chunk.get_block_collision(actor.position() - cgmath::Vector3::new(0.0, 0.1, 0.0), actor.size()).is_some();
-
-        // If the player is moving towards the ground while touching it, snap to the floor
-        // and prevent y_velocity from building up over time.
-        if grounded && actor.y_velocity() < 0.0 {
-            actor.snap_to_floor()
-        }
-
-        actor.apply_gravity(delta_time);
-
-        if grounded && input.is_key_held(VirtualKeyCode::Space) {
+        if actor.grounded() && input.is_key_held(VirtualKeyCode::Space) {
             actor.jump();
         }
 
@@ -56,10 +46,6 @@ impl Ai for PlayerAi {
 
         actor.step(cgmath::Vector3::new(dir.x, 0.0, 0.0), actor.speed() * delta_time, chunk, no_clip);
         actor.step(cgmath::Vector3::new(0.0, 0.0, dir.z), actor.speed() * delta_time, chunk, no_clip);
-
-        if !actor.step(cgmath::Vector3::unit_y(), actor.y_velocity() * delta_time, chunk, no_clip) {
-            actor.reset_y_velocity();
-        }
 
         actor.rotate(input.mouse_delta_y() * MOUSE_SENSITIVITY, -input.mouse_delta_x() * MOUSE_SENSITIVITY);
     }

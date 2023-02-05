@@ -10,6 +10,7 @@ pub struct Actor {
     look_x: f32,
     look_y: f32,
     y_velocity: f32,
+    grounded: bool,
 }
 
 impl Actor {
@@ -21,10 +22,24 @@ impl Actor {
             look_x: 0.0,
             look_y: 0.0,
             y_velocity: 0.0,
+            grounded: false,
         }
     }
 
-    pub fn update(&mut self, input: &mut Input, chunk: &Chunk, delta_time: f32) {
+    pub fn update(&mut self, _input: &mut Input, chunk: &Chunk, delta_time: f32) {
+        self.grounded = chunk.get_block_collision(self.position - cgmath::Vector3::new(0.0, 0.1, 0.0), self.size).is_some();
+
+        // If the player is moving towards the ground while touching it, snap to the floor
+        // and prevent y_velocity from building up over time.
+        if self.grounded && self.y_velocity < 0.0 {
+            self.snap_to_floor()
+        }
+
+        self.apply_gravity(delta_time);
+
+        if !self.step(cgmath::Vector3::unit_y(), self.y_velocity() * delta_time, chunk, false) {
+            self.reset_y_velocity();
+        }
     }
 
     pub fn step(&mut self, dir: cgmath::Vector3<f32>, speed: f32, chunk: &Chunk, no_clip: bool) -> bool {
@@ -51,21 +66,18 @@ impl Actor {
         self.position = position;
     }
 
-    // TODO: This logic should be processed in actor update regardless of AI, so this should not be public.
-    pub fn snap_to_floor(&mut self) {
+    fn snap_to_floor(&mut self) {
         self.reset_y_velocity();
         self.position.y = self.position.y.floor() + self.size.y * 0.5;
     }
 
-    pub fn reset_y_velocity(&mut self) {
+    fn reset_y_velocity(&mut self) {
         self.y_velocity = 0.0;
     }
 
-    pub fn apply_gravity(&mut self, delta_time: f32) {
+    fn apply_gravity(&mut self, delta_time: f32) {
         self.y_velocity -= GRAVITY * delta_time;
     }
-
-    // ENDTODO
 
     pub fn jump(&mut self) {
         self.y_velocity = JUMP_FORCE;
@@ -97,5 +109,9 @@ impl Actor {
 
     pub fn speed(&self) -> f32 {
         self.speed
+    }
+
+    pub fn grounded(&self) -> bool {
+        self.grounded
     }
 }
