@@ -3,6 +3,7 @@ use crate::chunk::Chunk;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
+use crate::player::Player;
 use crate::rng::Rng;
 use crate::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
 use crate::texture::{self, Texture};
@@ -18,7 +19,6 @@ use winit::window::Window;
 
 /*
  * TODO:
- * Factor out player code into struct
  * Orthographic camera/ ui
  */
 
@@ -36,6 +36,7 @@ pub struct State {
     camera: Camera,
     model: Model,
     chunk: Chunk,
+    player: Player,
 }
 
 impl State {
@@ -100,7 +101,7 @@ impl State {
         let camera = Camera::new(
             &device,
             CameraPerspectiveProjection::new(
-                (0.0, 0.0, 2.0).into(),
+                cgmath::Vector3::zero(),
                 90.0,
                 0.1,
                 100.0,
@@ -199,6 +200,8 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
+        let player = Player::new(cgmath::Vector3::new(0.0, 200.0, 0.0), cgmath::Vector3::new(0.5, 0.8, 0.5), 4.0);
+
         Self {
             window,
             input,
@@ -213,6 +216,7 @@ impl State {
             camera,
             model,
             chunk,
+            player,
         }
     }
 
@@ -269,35 +273,6 @@ impl State {
     }
 
     pub fn update(&mut self, delta_time: f32) {
-        let speed = 3.0;
-        let mut dir_z = 0.0;
-        let mut dir_y = 0.0;
-        let mut dir_x = 0.0;
-
-        if self.input.is_key_held(VirtualKeyCode::W) {
-            dir_z += 1.0;
-        }
-
-        if self.input.is_key_held(VirtualKeyCode::S) {
-            dir_z -= 1.0;
-        }
-
-        if self.input.is_key_held(VirtualKeyCode::A) {
-            dir_x += 1.0;
-        }
-
-        if self.input.is_key_held(VirtualKeyCode::D) {
-            dir_x -= 1.0;
-        }
-
-        if self.input.is_key_held(VirtualKeyCode::Space) {
-            dir_y += 1.0;
-        }
-
-        if self.input.is_key_held(VirtualKeyCode::LShift) {
-            dir_y -= 1.0;
-        }
-
         if self.input.was_mouse_button_pressed(MouseButton::Left, true) {
             self.input.set_focused(&self.window, true);
         }
@@ -306,45 +281,9 @@ impl State {
             self.input.set_focused(&self.window, false);
         }
 
-        let no_clip = self.input.is_key_held(VirtualKeyCode::V);
-
-        let forward = Camera::get_direction_vec(self.camera.look_y());
-        let right = Camera::get_direction_vec(self.camera.look_y() + 90.0);
-        let mut dir = dir_z * forward + dir_x * right + dir_y * cgmath::Vector3::<f32>::unit_y();
-
-        if dir.magnitude() != 0.0 {
-            dir = dir.normalize();
-        }
-
-        let size = cgmath::Vector3 { x: 0.5, y: 0.5, z: 0.5 };
-
-        let old_position = self.camera.position();
-        self.camera.translate(cgmath::Vector3::new(dir.x, 0.0, 0.0), speed * delta_time);
-
-        if !no_clip && self.chunk.get_block_collision(self.camera.position(), size).is_some() {
-            self.camera.teleport(old_position);
-        }
-
-        let old_position = self.camera.position();
-        self.camera.translate(cgmath::Vector3::new(0.0, dir.y, 0.0), speed * delta_time);
-
-        if !no_clip && self.chunk.get_block_collision(self.camera.position(), size).is_some() {
-            self.camera.teleport(old_position);
-        }
-
-        let old_position = self.camera.position();
-        self.camera.translate(cgmath::Vector3::new(0.0, 0.0, dir.z), speed * delta_time);
-
-        if !no_clip && self.chunk.get_block_collision(self.camera.position(), size).is_some() {
-            self.camera.teleport(old_position);
-        }
-
-        let mouse_sensitivity = 0.1;
-        let mouse_delta_x = self.input.mouse_delta_x() * mouse_sensitivity;
-        let mouse_delta_y = self.input.mouse_delta_y() * mouse_sensitivity;
-
-        self.camera.rotate(mouse_delta_y, -mouse_delta_x);
-
+        self.player.update(&mut self.input, &self.chunk, delta_time);
+        self.camera.rotate(self.player.look_x(), self.player.look_y());
+        self.camera.teleport(self.player.head_position());
         self.camera.update(&self.queue);
 
         self.input.update();

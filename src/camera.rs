@@ -62,7 +62,7 @@ impl Camera {
             bind_group_layout,
             bind_group,
             look_x: 0.0,
-            look_y: 180.0,
+            look_y: 0.0,
         }
     }
 
@@ -75,11 +75,6 @@ impl Camera {
         queue.write_buffer(&self.buffer, 0, to_bytes(&[self.uniform]));
     }
 
-    pub fn translate(&mut self, dir: cgmath::Vector3<f32>, speed: f32) {
-        let velocity = dir * speed;
-        self.projection.eye += velocity;
-    }
-
     pub fn get_direction_vec(direction: f32) -> cgmath::Vector3<f32> {
         cgmath::Vector3::new(
             direction.to_radians().sin(),
@@ -88,10 +83,9 @@ impl Camera {
         )
     }
 
-    pub fn rotate(&mut self, delta_x: f32, delta_y: f32) {
-        self.look_x += delta_x;
-        self.look_y += delta_y;
-        self.look_x = self.look_x.clamp(-89.0, 89.0);
+    pub fn rotate(&mut self, look_x: f32, look_y: f32) {
+        self.look_x = look_x;
+        self.look_y = look_y;
 
         let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.look_y));
         let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(self.look_x));
@@ -105,14 +99,6 @@ impl Camera {
 
     pub fn teleport(&mut self, position: cgmath::Vector3<f32>) {
         self.projection.eye = position;
-    }
-
-    pub fn look_x(&self) -> f32 {
-        self.look_x
-    }
-
-    pub fn look_y(&self) -> f32 {
-        self.look_y
     }
 
     pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
