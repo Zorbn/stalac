@@ -1,8 +1,8 @@
 struct InstanceInput {
-    @location(2) model_matrix_0: vec4<f32>,
-    @location(3) model_matrix_1: vec4<f32>,
-    @location(4) model_matrix_2: vec4<f32>,
-    @location(5) model_matrix_3: vec4<f32>,
+    @location(3) model_matrix_0: vec4<f32>,
+    @location(4) model_matrix_1: vec4<f32>,
+    @location(5) model_matrix_2: vec4<f32>,
+    @location(6) model_matrix_3: vec4<f32>,
 };
 
 struct CameraUniform {
@@ -14,11 +14,14 @@ var<uniform> camera: CameraUniform;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
+    @location(2) tex_index: u32,
 }
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) tex_coords: vec2<f32>,
+    @location(1) tex_index: u32,
+    @location(2) light_level: f32,
 }
 
 @vertex
@@ -33,18 +36,22 @@ fn vs_main(
         instance.model_matrix_3,
     );
 
+    let light_pos = vec3(0.0, 0.0, 0.0);
+
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
+    out.tex_index = model.tex_index;
     out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
+    out.light_level = distance(out.clip_position.xyz, light_pos);
     return out;
 }
 
 @group(0) @binding(0)
-var t_diffuse: texture_2d<f32>;
+var t_diffuse_array: binding_array<texture_2d<f32>>;
 @group(0)@binding(1)
-var s_diffuse: sampler;
+var s_diffuse_array: binding_array<sampler>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    return textureSample(t_diffuse_array[in.tex_index], s_diffuse_array[in.tex_index], in.tex_coords) / (abs(in.light_level) + 1.0);
 }

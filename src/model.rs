@@ -1,5 +1,5 @@
 use crate::{instance::Instance, vertex::Vertex};
-use wgpu::{util::DeviceExt, RenderPass};
+use wgpu::util::DeviceExt;
 
 pub struct Model {
     pub vertices: wgpu::Buffer,

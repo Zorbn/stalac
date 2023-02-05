@@ -98,6 +98,7 @@ impl Camera {
     pub fn rotate(&mut self, delta_x: f32, delta_y: f32) {
         self.look_x += delta_x;
         self.look_y += delta_y;
+        self.look_x = self.look_x.clamp(-89.0, 89.0);
 
         let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.look_y));
         let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(self.look_x));

@@ -16,22 +16,27 @@ const VERTICES: &[Vertex] = &[
     Vertex {
         position: [-0.0868241, 0.49240386, 0.0],
         tex_coords: [0.4131759, 0.99240386],
+        tex_index: 0,
     },
     Vertex {
         position: [-0.49513406, 0.06958647, 0.0],
         tex_coords: [0.0048659444, 0.56958647],
+        tex_index: 0,
     },
     Vertex {
         position: [-0.21918549, -0.44939706, 0.0],
         tex_coords: [0.28081453, 0.05060294],
+        tex_index: 0,
     },
     Vertex {
         position: [0.35966998, -0.3473291, 0.0],
         tex_coords: [0.85967, 0.1526709],
+        tex_index: 0,
     },
     Vertex {
         position: [0.44147372, 0.2347359, 0.0],
         tex_coords: [0.9414737, 0.7347359],
+        tex_index: 0,
     },
 ];
 
@@ -81,7 +86,7 @@ impl State {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: Features::TEXTURE_BINDING_ARRAY,
+                    features: Features::TEXTURE_BINDING_ARRAY | wgpu::Features::SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -108,8 +113,9 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        let diffuse_texture = Texture::from_path(&device, &queue, "happy-tree.png").unwrap();
-        let diffuse_texture_array = TextureArray::new(&device, vec![diffuse_texture]).unwrap();
+        let happy_tree = Texture::from_path(&device, &queue, "happy-tree.png").unwrap();
+        let sad_tree = Texture::from_path(&device, &queue, "sad-tree.png").unwrap();
+        let diffuse_texture_array = TextureArray::new(&device, vec![happy_tree, sad_tree]).unwrap();
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -195,6 +201,13 @@ impl State {
                 x: 1.0,
                 y: 1.0,
                 z: -1.0,
+            },
+            rotation: cgmath::Quaternion::zero(),
+        }, Instance {
+            position: cgmath::Vector3 {
+                x: 1.0,
+                y: 1.0,
+                z: 10.0,
             },
             rotation: cgmath::Quaternion::zero(),
         }];
