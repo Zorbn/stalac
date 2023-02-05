@@ -75,18 +75,9 @@ impl Camera {
         queue.write_buffer(&self.buffer, 0, to_bytes(&[self.uniform]));
     }
 
-    pub fn translate(&mut self, dir_x: f32, dir_y: f32, dir_z: f32, speed: f32) {
-        let forward = Self::get_direction_vec(self.look_y);
-        let right = Self::get_direction_vec(self.look_y + 90.0);
-        let dir = dir_z * forward + dir_x * right + dir_y * cgmath::Vector3::unit_y();
-
-        if dir.magnitude() == 0.0 {
-            return;
-        }
-
-        let velocity = dir.normalize() * speed;
+    pub fn translate(&mut self, dir: cgmath::Vector3<f32>, speed: f32) {
+        let velocity = dir * speed;
         self.projection.eye += velocity;
-        self.projection.target += velocity;
     }
 
     pub fn get_direction_vec(direction: f32) -> cgmath::Vector3<f32> {
@@ -105,12 +96,23 @@ impl Camera {
         let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.look_y));
         let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(self.look_x));
         let rot = y_rot * x_rot;
-        let new_target = self.projection.eye.to_vec() + rot * cgmath::Vector3::unit_z();
-        self.projection.target = cgmath::Point3::new(new_target.x, new_target.y, new_target.z);
+        self.projection.look = rot * cgmath::Vector3::unit_z();
     }
 
     pub fn position(&self) -> cgmath::Vector3<f32> {
-        self.projection.eye.to_vec()
+        self.projection.eye
+    }
+
+    pub fn teleport(&mut self, position: cgmath::Vector3<f32>) {
+        self.projection.eye = position;
+    }
+
+    pub fn look_x(&self) -> f32 {
+        self.look_x
+    }
+
+    pub fn look_y(&self) -> f32 {
+        self.look_y
     }
 
     pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
@@ -123,8 +125,8 @@ impl Camera {
 }
 
 pub struct CameraPerspectiveProjection {
-    pub eye: cgmath::Point3<f32>,
-    pub target: cgmath::Point3<f32>,
+    pub eye: cgmath::Vector3<f32>,
+    pub look: cgmath::Vector3<f32>,
     pub up: cgmath::Vector3<f32>,
     pub aspect: f32,
     pub fov_y: f32,
@@ -134,7 +136,7 @@ pub struct CameraPerspectiveProjection {
 
 impl CameraPerspectiveProjection {
     pub fn new(
-        position: cgmath::Point3<f32>,
+        position: cgmath::Vector3<f32>,
         fov_y: f32,
         z_near: f32,
         z_far: f32,
@@ -143,7 +145,7 @@ impl CameraPerspectiveProjection {
     ) -> Self {
         Self {
             eye: position,
-            target: position - cgmath::Vector3::unit_z(),
+            look: cgmath::Vector3::unit_z(),
             up: cgmath::Vector3::unit_y(),
             aspect: Self::get_aspect(width, height),
             fov_y,
@@ -153,7 +155,9 @@ impl CameraPerspectiveProjection {
     }
 
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
+        let eye_point = cgmath::Point3::new(self.eye.x, self.eye.y, self.eye.z);
+        let target_point = cgmath::Point3::new(self.eye.x + self.look.x, self.eye.y + self.look.y, self.eye.z + self.look.z);
+        let view = cgmath::Matrix4::look_at_rh(eye_point, target_point, self.up);
         let proj = cgmath::perspective(
             cgmath::Deg(self.fov_y),
             self.aspect,

@@ -10,6 +10,7 @@ const CHUNK_SIZE: usize = 32;
 const CHUNK_HEIGHT: usize = 8;
 const CHUNK_LEN: usize = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE;
 const BLOCK_SIZE: f32 = 3.0;
+const INV_BLOCK_SIZE: f32 = 1.0 / BLOCK_SIZE;
 
 pub struct Chunk {
     pub model: Option<Model>,
@@ -127,5 +128,33 @@ impl Chunk {
         let uz = z as usize;
 
         self.blocks[ux + uy * CHUNK_SIZE + uz * CHUNK_SIZE * CHUNK_HEIGHT]
+    }
+
+    pub fn get_block_collision(&self, mut position: cgmath::Vector3<f32>, mut size: cgmath::Vector3<f32>) -> Option<cgmath::Vector3<i32>> {
+        position *= INV_BLOCK_SIZE;
+        size *= INV_BLOCK_SIZE;
+
+        let start = position - size * 0.5;
+
+        let steps = size.cast::<i32>().expect("Failed to calculate step count!") + cgmath::Vector3::new(1, 1, 1);
+        let mut interp = cgmath::Vector3::<f32>::new(0.0, 0.0, 0.0);
+
+        for x in 0..=steps.x {
+            interp.x = start.x + x as f32 / steps.x as f32 * size.x;
+            for y in 0..=steps.y {
+                interp.y = start.y + y as f32 / steps.y as f32 * size.y;
+                for z in 0..=steps.z {
+                    interp.z = start.z + z as f32 / steps.z as f32 * size.z;
+
+                    let interp_block = interp.cast::<i32>().expect("Failed to calculate interp block!");
+
+                    if self.get_block(interp_block.x, interp_block.y, interp_block.z) {
+                        return Some(interp_block);
+                    }
+                }
+            }
+        }
+
+        None
     }
 }
