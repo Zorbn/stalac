@@ -11,6 +11,7 @@ mod texture;
 mod texture_array;
 mod vertex;
 mod bytes;
+mod rng;
 
 use std::time::Instant;
 

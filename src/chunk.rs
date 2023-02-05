@@ -2,9 +2,9 @@ use crate::cube_mesh::CUBE_VERTICES;
 use crate::direction::{index_to_dir, dir_to_offset};
 use crate::instance::Instance;
 use crate::model::Model;
+use crate::rng::Rng;
 use crate::{cube_mesh::CUBE_INDICES, vertex::Vertex};
 use cgmath::Zero;
-use rand::prelude::*;
 
 const CHUNK_SIZE: usize = 32;
 const CHUNK_HEIGHT: usize = 8;
@@ -28,13 +28,11 @@ impl Chunk {
         }
     }
 
-    pub fn generate_blocks(&mut self) {
-        let mut rng = rand::thread_rng();
-
+    pub fn generate_blocks(&mut self, rng: &mut Rng) {
         for z in 0..CHUNK_SIZE {
             for y in 0..CHUNK_HEIGHT {
                 for x in 0..CHUNK_SIZE {
-                    if rng.gen::<f32>() < 0.5 {
+                    if rng.range(100) < 50 {
                         continue;
                     }
 

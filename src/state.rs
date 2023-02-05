@@ -3,11 +3,13 @@ use crate::chunk::Chunk;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
+use crate::rng::Rng;
 use crate::texture::{self, Texture};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
 use cgmath::Zero;
 use std::iter::once;
+use std::time::{UNIX_EPOCH, SystemTime};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
 use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
@@ -223,8 +225,9 @@ impl State {
 
         let input = Input::new();
 
+        let mut rng = Rng::new(SystemTime::now().duration_since(UNIX_EPOCH).expect("Inaccurate system time!").as_millis() as u32);
         let mut chunk = Chunk::new();
-        chunk.generate_blocks();
+        chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
         Self {
