@@ -1,4 +1,4 @@
-use crate::{instance::Instance, vertex::Vertex};
+use crate::{instance::Instance, vertex::Vertex, bytes::to_bytes};
 use wgpu::util::DeviceExt;
 
 pub struct Model {
@@ -13,12 +13,12 @@ impl Model {
     pub fn new(device: &wgpu::Device, vertex_array: &[Vertex], index_array: &[u32]) -> Self {
         let vertices = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(vertex_array),
+            contents: to_bytes(vertex_array),
             usage: wgpu::BufferUsages::VERTEX,
         });
         let indices = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(index_array),
+            contents: to_bytes(index_array),
             usage: wgpu::BufferUsages::INDEX,
         });
         let num_indices = index_array.len() as u32;
@@ -42,7 +42,7 @@ impl Model {
         let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
         self.instances = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&instance_data),
+            contents: to_bytes(&instance_data),
             usage: wgpu::BufferUsages::VERTEX,
         });
         self.num_instances = instances.len() as u32;

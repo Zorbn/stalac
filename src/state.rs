@@ -225,10 +225,7 @@ impl State {
 
         let mut chunk = Chunk::new();
         chunk.generate_blocks();
-
-        for _ in 0..100 {
-            chunk.generate_mesh(&device);
-        }
+        chunk.generate_mesh(&device);
 
         Self {
             window,

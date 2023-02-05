@@ -10,6 +10,7 @@ mod state;
 mod texture;
 mod texture_array;
 mod vertex;
+mod bytes;
 
 use std::time::Instant;
 

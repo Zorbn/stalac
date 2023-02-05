@@ -1,6 +1,8 @@
 use cgmath::prelude::*;
 use wgpu::util::DeviceExt;
 
+use crate::bytes::to_bytes;
+
 #[rustfmt::skip]
 const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     1.0, 0.0, 0.0, 0.0,
@@ -26,7 +28,7 @@ impl Camera {
 
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[uniform]),
+            contents: to_bytes(&[uniform]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -70,7 +72,7 @@ impl Camera {
 
     pub fn update(&mut self, queue: &wgpu::Queue) {
         self.uniform.update_view_proj(&self.projection);
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[self.uniform]));
+        queue.write_buffer(&self.buffer, 0, to_bytes(&[self.uniform]));
     }
 
     pub fn translate(&mut self, dir_x: f32, dir_y: f32, dir_z: f32, speed: f32) {
@@ -164,7 +166,7 @@ impl CameraPerspectiveProjection {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Copy, Clone)]
 pub struct CameraUniform {
     pub view_proj: [[f32; 4]; 4],
 }
