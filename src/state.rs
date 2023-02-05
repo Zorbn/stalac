@@ -1,9 +1,10 @@
+use crate::entity::Entity;
 use crate::camera::{Camera, CameraPerspectiveProjection};
 use crate::chunk::Chunk;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
-use crate::player::Player;
+use crate::player_ai::PlayerAi;
 use crate::rng::Rng;
 use crate::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
 use crate::texture::{self, Texture};
@@ -41,7 +42,7 @@ pub struct State {
     camera: Camera,
     model: Model,
     chunk: Chunk,
-    player: Player,
+    player: Entity,
 }
 
 impl State {
@@ -205,10 +206,11 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
-        let mut player = Player::new(cgmath::Vector3::zero(), cgmath::Vector3::new(0.5, 0.8, 0.5), 4.0);
+        let player_ai = Box::new(PlayerAi{}); // TODO: Create a registry struct that creates and stores this type of object.
+        let mut player = Entity::new(cgmath::Vector3::zero(), cgmath::Vector3::new(0.5, 0.8, 0.5), 4.0, Some(player_ai));
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
-            player.teleport(player_spawn);
+            player.actor.teleport(player_spawn);
         }
 
         Self {
@@ -291,8 +293,8 @@ impl State {
         }
 
         self.player.update(&mut self.input, &self.chunk, delta_time);
-        self.camera.rotate(self.player.look_x(), self.player.look_y());
-        self.camera.teleport(self.player.head_position());
+        self.camera.rotate(self.player.actor.look_x(), self.player.actor.look_y());
+        self.camera.teleport(self.player.actor.head_position());
         self.camera.update(&self.queue);
 
         self.input.update();

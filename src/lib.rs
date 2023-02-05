@@ -13,7 +13,10 @@ mod vertex;
 mod bytes;
 mod rng;
 mod sprite_mesh;
-mod player;
+mod actor;
+mod entity;
+mod ai;
+mod player_ai;
 
 use std::time::Instant;
 

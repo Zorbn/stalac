@@ -1,0 +1,66 @@
+use winit::event::VirtualKeyCode;
+use cgmath::prelude::*;
+
+use crate::{ai::Ai, actor::Actor, input::Input, chunk::Chunk, camera::Camera};
+
+const MOUSE_SENSITIVITY: f32 = 0.1;
+
+pub struct PlayerAi {
+
+}
+
+impl Ai for PlayerAi {
+    fn update(&mut self, actor: &mut Actor, input: &mut Input, chunk: &Chunk, delta_time: f32) {
+        let mut dir_z = 0.0;
+        let mut dir_x = 0.0;
+
+        if input.is_key_held(VirtualKeyCode::W) {
+            dir_z += 1.0;
+        }
+
+        if input.is_key_held(VirtualKeyCode::S) {
+            dir_z -= 1.0;
+        }
+
+        if input.is_key_held(VirtualKeyCode::A) {
+            dir_x += 1.0;
+        }
+
+        if input.is_key_held(VirtualKeyCode::D) {
+            dir_x -= 1.0;
+        }
+
+        let grounded = chunk.get_block_collision(actor.position() - cgmath::Vector3::new(0.0, 0.1, 0.0), actor.size()).is_some();
+
+        // If the player is moving towards the ground while touching it, snap to the floor
+        // and prevent y_velocity from building up over time.
+        if grounded && actor.y_velocity() < 0.0 {
+            actor.snap_to_floor()
+        }
+
+        actor.apply_gravity(delta_time);
+
+        if grounded && input.is_key_held(VirtualKeyCode::Space) {
+            actor.jump();
+        }
+
+        let no_clip = input.is_key_held(VirtualKeyCode::V);
+
+        let forward = Camera::get_direction_vec(actor.look_y());
+        let right = Camera::get_direction_vec(actor.look_y() + 90.0);
+        let mut dir = dir_z * forward + dir_x * right;
+
+        if dir.magnitude() != 0.0 {
+            dir = dir.normalize();
+        }
+
+        actor.step(cgmath::Vector3::new(dir.x, 0.0, 0.0), actor.speed() * delta_time, chunk, no_clip);
+        actor.step(cgmath::Vector3::new(0.0, 0.0, dir.z), actor.speed() * delta_time, chunk, no_clip);
+
+        if !actor.step(cgmath::Vector3::unit_y(), actor.y_velocity() * delta_time, chunk, no_clip) {
+            actor.reset_y_velocity();
+        }
+
+        actor.rotate(input.mouse_delta_y() * MOUSE_SENSITIVITY, -input.mouse_delta_x() * MOUSE_SENSITIVITY);
+    }
+}

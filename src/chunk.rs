@@ -30,15 +30,21 @@ impl Chunk {
     }
 
     pub fn generate_blocks(&mut self, rng: &mut Rng) {
-        for z in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_HEIGHT {
-                for x in 0..CHUNK_SIZE {
-                    if rng.range(100) < 50 {
-                        continue;
-                    }
+        // for z in 0..CHUNK_SIZE {
+        //     for y in 0..CHUNK_HEIGHT {
+        //         for x in 0..CHUNK_SIZE {
+        //             if rng.range(100) < 50 {
+        //                 continue;
+        //             }
 
-                    self.set_block(true, x as i32, y as i32, z as i32);
-                }
+        //             self.set_block(true, x as i32, y as i32, z as i32);
+        //         }
+        //     }
+        // }
+
+        for z in 0..CHUNK_SIZE {
+            for x in 0..CHUNK_SIZE {
+                self.set_block(true, x as i32, 0, z as i32);
             }
         }
     }
