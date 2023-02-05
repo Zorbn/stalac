@@ -63,7 +63,6 @@ pub struct State {
     model: Model,
     model2: Model,
     chunk: Chunk,
-    chunk_model: Model,
 }
 
 impl State {
@@ -226,19 +225,10 @@ impl State {
 
         let mut chunk = Chunk::new();
         chunk.generate_blocks();
-        let (chunk_verts, chunk_inds) = chunk.generate_mesh();
-        let mut chunk_model = Model::new(&device, &chunk_verts, &chunk_inds);
-        chunk_model.update_instances(
-            &device,
-            &vec![Instance {
-                position: cgmath::Vector3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                rotation: cgmath::Quaternion::zero(),
-            }],
-        );
+
+        for _ in 0..100 {
+            chunk.generate_mesh(&device);
+        }
 
         Self {
             window,
@@ -255,7 +245,6 @@ impl State {
             model,
             model2,
             chunk,
-            chunk_model,
         }
     }
 
@@ -314,6 +303,7 @@ impl State {
     pub fn update(&mut self, delta_time: f32) {
         let speed = 3.0;
         let mut dir_z = 0.0;
+        let mut dir_y = 0.0;
         let mut dir_x = 0.0;
 
         if self.input.is_key_held(VirtualKeyCode::W) {
@@ -332,6 +322,14 @@ impl State {
             dir_x -= 1.0;
         }
 
+        if self.input.is_key_held(VirtualKeyCode::Space) {
+            dir_y += 1.0;
+        }
+
+        if self.input.is_key_held(VirtualKeyCode::LShift) {
+            dir_y -= 1.0;
+        }
+
         if self.input.was_mouse_button_pressed(MouseButton::Left, true) {
             self.input.set_focused(&self.window, true);
         }
@@ -345,7 +343,7 @@ impl State {
         let mouse_delta_y = self.input.mouse_delta_y() * mouse_sensitivity;
 
         self.camera.rotate(mouse_delta_y, -mouse_delta_x);
-        self.camera.translate(dir_x, 0.0, dir_z, speed * delta_time);
+        self.camera.translate(dir_x, dir_y, dir_z, speed * delta_time);
         self.camera.update(&self.queue);
 
         self.input.update();
@@ -392,17 +390,19 @@ impl State {
             render_pass.set_bind_group(0, self.diffuse_texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.camera.bind_group(), &[]);
 
-            render_pass.set_vertex_buffer(0, self.chunk_model.vertices().slice(..));
-            render_pass.set_index_buffer(
-                self.chunk_model.indices().slice(..),
-                wgpu::IndexFormat::Uint32,
-            );
-            render_pass.set_vertex_buffer(1, self.chunk_model.instances().slice(..));
-            render_pass.draw_indexed(
-                0..self.chunk_model.num_indices(),
-                0,
-                0..self.chunk_model.num_instances(),
-            );
+            if let Some(model) = &self.chunk.model {
+                render_pass.set_vertex_buffer(0, model.vertices().slice(..));
+                render_pass.set_index_buffer(
+                    model.indices().slice(..),
+                    wgpu::IndexFormat::Uint32,
+                );
+                render_pass.set_vertex_buffer(1, model.instances().slice(..));
+                render_pass.draw_indexed(
+                    0..model.num_indices(),
+                    0,
+                    0..model.num_instances(),
+                );
+            }
         }
 
         self.queue.submit(once(encoder.finish()));
