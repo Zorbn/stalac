@@ -1,4 +1,4 @@
-use crate::{input::Input, chunk::Chunk};
+use crate::{chunk::Chunk, input::Input};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
@@ -27,7 +27,12 @@ impl Actor {
     }
 
     pub fn update(&mut self, _input: &mut Input, chunk: &Chunk, delta_time: f32) {
-        self.grounded = chunk.get_block_collision(self.position - cgmath::Vector3::new(0.0, 0.1, 0.0), self.size).is_some();
+        self.grounded = chunk
+            .get_block_collision(
+                self.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
+                self.size,
+            )
+            .is_some();
 
         // If the player is moving towards the ground while touching it, snap to the floor
         // and prevent y_velocity from building up over time.
@@ -37,18 +42,33 @@ impl Actor {
 
         self.apply_gravity(delta_time);
 
-        if !self.step(cgmath::Vector3::unit_y(), self.y_velocity() * delta_time, chunk, false) {
+        if !self.step(
+            cgmath::Vector3::unit_y(),
+            self.y_velocity() * delta_time,
+            chunk,
+            false,
+        ) {
             self.reset_y_velocity();
         }
     }
 
-    pub fn step(&mut self, dir: cgmath::Vector3<f32>, speed: f32, chunk: &Chunk, no_clip: bool) -> bool {
+    pub fn step(
+        &mut self,
+        dir: cgmath::Vector3<f32>,
+        speed: f32,
+        chunk: &Chunk,
+        no_clip: bool,
+    ) -> bool {
         let old_position = self.position;
 
         let velocity = dir * speed;
         self.position += velocity;
 
-        if !no_clip && chunk.get_block_collision(self.position, self.size).is_some() {
+        if !no_clip
+            && chunk
+                .get_block_collision(self.position, self.size)
+                .is_some()
+        {
             self.position = old_position;
             return false;
         }

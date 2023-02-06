@@ -1,15 +1,15 @@
 use crate::cube_mesh::CUBE_VERTICES;
-use crate::direction::{index_to_dir, dir_to_offset};
+use crate::direction::{dir_to_offset, index_to_dir};
 use crate::instance::Instance;
 use crate::model::Model;
 use crate::rng::Rng;
 use crate::{cube_mesh::CUBE_INDICES, vertex::Vertex};
 use cgmath::Zero;
 
+pub const BLOCK_SIZE: f32 = 3.0;
 const CHUNK_SIZE: usize = 32;
 const CHUNK_HEIGHT: usize = 8;
 const CHUNK_LEN: usize = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE;
-const BLOCK_SIZE: f32 = 3.0;
 const INV_BLOCK_SIZE: f32 = 1.0 / BLOCK_SIZE;
 
 pub struct Chunk {
@@ -111,7 +111,8 @@ impl Chunk {
     pub fn set_block(&mut self, solid: bool, x: i32, y: i32, z: i32) {
         let i_chunk_size = CHUNK_SIZE as i32;
         let i_chunk_height = CHUNK_HEIGHT as i32;
-        if x < 0 || x >= i_chunk_size || y < 0 || y >= i_chunk_height || z < 0 || z >= i_chunk_size {
+        if x < 0 || x >= i_chunk_size || y < 0 || y >= i_chunk_height || z < 0 || z >= i_chunk_size
+        {
             return;
         }
 
@@ -125,8 +126,9 @@ impl Chunk {
     pub fn get_block(&self, x: i32, y: i32, z: i32) -> bool {
         let i_chunk_size = CHUNK_SIZE as i32;
         let i_chunk_height = CHUNK_HEIGHT as i32;
-        if x < 0 || x >= i_chunk_size || y < 0 || y >= i_chunk_height || z < 0 || z >= i_chunk_size {
-            return false;
+        if x < 0 || x >= i_chunk_size || y < 0 || y >= i_chunk_height || z < 0 || z >= i_chunk_size
+        {
+            return true;
         }
 
         let ux = x as usize;
@@ -136,13 +138,18 @@ impl Chunk {
         self.blocks[ux + uy * CHUNK_SIZE + uz * CHUNK_SIZE * CHUNK_HEIGHT]
     }
 
-    pub fn get_block_collision(&self, mut position: cgmath::Vector3<f32>, mut size: cgmath::Vector3<f32>) -> Option<cgmath::Vector3<i32>> {
+    pub fn get_block_collision(
+        &self,
+        mut position: cgmath::Vector3<f32>,
+        mut size: cgmath::Vector3<f32>,
+    ) -> Option<cgmath::Vector3<i32>> {
         position *= INV_BLOCK_SIZE;
         size *= INV_BLOCK_SIZE;
 
         let start = position - size * 0.5;
 
-        let steps = size.cast::<i32>().expect("Failed to calculate step count!") + cgmath::Vector3::new(1, 1, 1);
+        let steps = size.cast::<i32>().expect("Failed to calculate step count!")
+            + cgmath::Vector3::new(1, 1, 1);
         let mut interp = cgmath::Vector3::<f32>::new(0.0, 0.0, 0.0);
 
         for x in 0..=steps.x {
@@ -152,7 +159,9 @@ impl Chunk {
                 for z in 0..=steps.z {
                     interp.z = start.z + z as f32 / steps.z as f32 * size.z;
 
-                    let interp_block = interp.cast::<i32>().expect("Failed to calculate interp block!");
+                    let interp_block = interp
+                        .cast::<i32>()
+                        .expect("Failed to calculate interp block!");
 
                     if self.get_block(interp_block.x, interp_block.y, interp_block.z) {
                         return Some(interp_block);

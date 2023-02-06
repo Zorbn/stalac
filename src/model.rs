@@ -1,4 +1,4 @@
-use crate::{instance::Instance, vertex::Vertex, bytes::to_bytes};
+use crate::{bytes::to_bytes, instance::Instance, vertex::Vertex};
 use wgpu::util::DeviceExt;
 
 pub struct Model {

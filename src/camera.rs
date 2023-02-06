@@ -142,7 +142,11 @@ impl CameraPerspectiveProjection {
 
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let eye_point = cgmath::Point3::new(self.eye.x, self.eye.y, self.eye.z);
-        let target_point = cgmath::Point3::new(self.eye.x + self.look.x, self.eye.y + self.look.y, self.eye.z + self.look.z);
+        let target_point = cgmath::Point3::new(
+            self.eye.x + self.look.x,
+            self.eye.y + self.look.y,
+            self.eye.z + self.look.z,
+        );
         let view = cgmath::Matrix4::look_at_rh(eye_point, target_point, self.up);
         let proj = cgmath::perspective(
             cgmath::Deg(self.fov_y),

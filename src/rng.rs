@@ -6,9 +6,7 @@ impl Rng {
     pub fn new(seed: u32) -> Self {
         assert_ne!(seed, 0);
 
-        Self {
-            state: seed,
-        }
+        Self { state: seed }
     }
 
     // Get a random number using 32bit xorshift.

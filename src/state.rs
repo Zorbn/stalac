@@ -1,18 +1,21 @@
-use crate::entity::Entity;
 use crate::camera::{Camera, CameraPerspectiveProjection};
+use crate::chase_ai::ChaseAi;
 use crate::chunk::Chunk;
+use crate::entity::Entity;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
 use crate::player_ai::PlayerAi;
 use crate::rng::Rng;
-use crate::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
+use crate::sprite_mesh::{SPRITE_INDICES, SPRITE_VERTICES};
 use crate::texture::{self, Texture};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
 use cgmath::prelude::*;
+use std::cell::RefCell;
 use std::iter::once;
-use std::time::{UNIX_EPOCH, SystemTime};
+use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
 use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
@@ -43,6 +46,7 @@ pub struct State {
     model: Model,
     chunk: Chunk,
     player: Entity,
+    enemy: Entity,
 }
 
 impl State {
@@ -201,16 +205,38 @@ impl State {
 
         let input = Input::new();
 
-        let mut rng = Rng::new(SystemTime::now().duration_since(UNIX_EPOCH).expect("Inaccurate system time!").as_millis() as u32);
+        let mut rng = Rng::new(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Inaccurate system time!")
+                .as_millis() as u32,
+        );
         let mut chunk = Chunk::new();
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
-        let player_ai = Box::new(PlayerAi{}); // TODO: Create a registry struct that creates and stores this type of object.
-        let mut player = Entity::new(cgmath::Vector3::zero(), cgmath::Vector3::new(0.5, 0.8, 0.5), 6.0, Some(player_ai));
+        let player_ai = Box::new(PlayerAi {});
+        let mut player = Entity::new(
+            cgmath::Vector3::zero(),
+            cgmath::Vector3::new(0.5, 0.8, 0.5),
+            6.0,
+            Some(player_ai),
+        );
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
             player.actor.teleport(player_spawn);
+        }
+
+        let chase_ai = Box::new(ChaseAi::new());
+        let mut enemy = Entity::new(
+            cgmath::Vector3::zero(),
+            cgmath::Vector3::new(0.5, 0.8, 0.5),
+            6.0,
+            Some(chase_ai),
+        );
+
+        if let Some(enemy_spawn) = chunk.get_spawn_position(&mut rng) {
+            enemy.actor.teleport(enemy_spawn);
         }
 
         Self {
@@ -228,6 +254,7 @@ impl State {
             model,
             chunk,
             player,
+            enemy,
         }
     }
 
@@ -292,8 +319,11 @@ impl State {
             self.input.set_focused(&self.window, false);
         }
 
-        self.player.update(&mut self.input, &self.chunk, delta_time);
-        self.camera.rotate(self.player.actor.look_x(), self.player.actor.look_y());
+        let player_position = self.player.actor.position();
+        self.enemy.update(&mut self.input, player_position, &self.chunk, delta_time);
+        self.player.update(&mut self.input, player_position, &self.chunk, delta_time);
+        self.camera
+            .rotate(self.player.actor.look_x(), self.player.actor.look_y());
         self.camera.teleport(self.player.actor.head_position());
         self.camera.update(&self.queue);
 
@@ -343,37 +373,25 @@ impl State {
 
             if let Some(model) = &self.chunk.model {
                 render_pass.set_vertex_buffer(0, model.vertices().slice(..));
-                render_pass.set_index_buffer(
-                    model.indices().slice(..),
-                    wgpu::IndexFormat::Uint32,
-                );
+                render_pass.set_index_buffer(model.indices().slice(..), wgpu::IndexFormat::Uint32);
                 render_pass.set_vertex_buffer(1, model.instances().slice(..));
-                render_pass.draw_indexed(
-                    0..model.num_indices(),
-                    0,
-                    0..model.num_instances(),
-                );
+                render_pass.draw_indexed(0..model.num_indices(), 0, 0..model.num_instances());
             }
 
-            let instance_pos = cgmath::Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            };
-            let mut instances = vec![
-                Instance {
-                    position: instance_pos,
-                    rotation: cgmath::Quaternion::zero(),
-                },
-            ];
+            // let instance_pos = cgmath::Vector3 {
+                // x: 0.0,
+                // y: 0.0,
+                // z: 0.0,
+            // };
+            let mut instances = vec![Instance {
+                position: self.enemy.actor.position(),
+                rotation: cgmath::Quaternion::zero(),
+            }];
             instances[0].rotate_towards(&self.camera.position());
 
             self.model.update_instances(&self.device, &instances);
             render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
-            render_pass.set_index_buffer(
-                self.model.indices().slice(..),
-                wgpu::IndexFormat::Uint32,
-            );
+            render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
             render_pass.draw_indexed(
                 0..self.model.num_indices(),

@@ -16,7 +16,7 @@ pub fn index_to_dir(i: usize) -> Direction {
         3 => Direction::Left,
         4 => Direction::Up,
         5 => Direction::Down,
-        _ => panic!("Failed to convert index to direction!")
+        _ => panic!("Failed to convert index to direction!"),
     }
 }
 
