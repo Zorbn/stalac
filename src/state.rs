@@ -17,7 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
 use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
-use winit::window::Window;
+use winit::window::{Window, Fullscreen};
 
 /*
  * TODO:
@@ -315,6 +315,14 @@ impl State {
 
         if self.input.was_key_pressed(VirtualKeyCode::Escape) {
             self.input.set_focused(&self.window, false);
+        }
+
+        if self.input.was_key_pressed(VirtualKeyCode::F11) {
+            if self.window.fullscreen().is_none() {
+                self.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+            } else {
+                self.window.set_fullscreen(None)
+            }
         }
 
         let player_position = self.player.actor.position();

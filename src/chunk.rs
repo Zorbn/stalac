@@ -48,6 +48,16 @@ impl Chunk {
                 self.set_block(true, x as i32, 0, z as i32);
             }
         }
+
+        for z in 0..CHUNK_SIZE {
+            for x in 0..CHUNK_SIZE {
+                if rng.range(100) > 10 {
+                    continue;
+                }
+
+                self.set_block(true, x as i32, 1, z as i32);
+            }
+        }
     }
 
     pub fn generate_mesh(&mut self, device: &wgpu::Device) {
