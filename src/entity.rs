@@ -1,8 +1,10 @@
-use crate::{actor::Actor, ai::Ai, chunk::Chunk, input::Input};
+use crate::{actor::Actor, chunk::Chunk, input::Input, entities::Entities, chase_ai::ChaseAi, player_ai::PlayerAi};
 
+// TODO: Convert to structure of arrays.
 pub struct Entity {
     pub actor: Actor,
-    pub ai: Option<Box<dyn Ai>>,
+    pub chase_ai: Option<ChaseAi>,
+    pub player_ai: Option<PlayerAi>,
 }
 
 impl Entity {
@@ -10,28 +12,27 @@ impl Entity {
         position: cgmath::Vector3<f32>,
         size: cgmath::Vector3<f32>,
         speed: f32,
-        ai: Option<Box<dyn Ai>>,
+        chase_ai: Option<ChaseAi>,
+        player_ai: Option<PlayerAi>,
     ) -> Self {
         Self {
             actor: Actor::new(position, size, speed),
-            ai,
+            chase_ai,
+            player_ai,
         }
     }
 
     // Todo: Change player position to entity list & player entity_id, once that system is implemented.
     pub fn update(
-        &mut self,
+        self_id: u32,
         input: &mut Input,
-        player_position: cgmath::Vector3<f32>,
+        entities: &mut Entities,
+        player_id: u32,
         chunk: &Chunk,
         delta_time: f32,
     ) {
-        let Entity { actor, ai } = self;
-
-        actor.update(input, chunk, delta_time);
-
-        if let Some(ai) = ai {
-            ai.update(actor, input, player_position, chunk, delta_time);
-        }
+        Actor::update(self_id, entities, input, chunk, delta_time);
+        ChaseAi::update(self_id, input, entities, player_id, chunk, delta_time);
+        PlayerAi::update(self_id, input, entities, player_id, chunk, delta_time);
     }
 }

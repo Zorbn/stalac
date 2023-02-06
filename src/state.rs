@@ -45,6 +45,7 @@ pub struct State {
     model: Model,
     chunk: Chunk,
     entities: Entities,
+    entity_key_cache: Vec<u32>,
     player_id: u32,
 }
 
@@ -214,24 +215,24 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
-        let player_ai = Box::new(PlayerAi {});
         let mut player = Entity::new(
             cgmath::Vector3::zero(),
             cgmath::Vector3::new(0.5, 0.8, 0.5),
             6.0,
-            Some(player_ai),
+            None,
+            Some(PlayerAi {}),
         );
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
             player.actor.teleport(player_spawn);
         }
 
-        let chase_ai = Box::new(ChaseAi::new());
         let mut enemy = Entity::new(
             cgmath::Vector3::zero(),
             cgmath::Vector3::new(0.5, 0.8, 0.5),
             6.0,
-            Some(chase_ai),
+            Some(ChaseAi::new()),
+            None,
         );
 
         if let Some(enemy_spawn) = chunk.get_spawn_position(&mut rng) {
@@ -239,8 +240,9 @@ impl State {
         }
 
         let mut entities = Entities::new();
-        let player_id = entities.insert(player, true);
+        let entity_key_cache = Vec::new();
         entities.insert(enemy, false);
+        let player_id = entities.insert(player, true);
 
         Self {
             window,
@@ -257,6 +259,7 @@ impl State {
             model,
             chunk,
             entities,
+            entity_key_cache,
             player_id,
         }
     }
@@ -331,13 +334,7 @@ impl State {
             }
         }
 
-        let player_position = match self.entities.get(self.player_id) {
-            Some(player) => player.actor.position(),
-            _ => cgmath::Vector3::zero(),
-        };
-
-        self.entities
-            .update(&mut self.input, player_position, &self.chunk, delta_time);
+        self.entities.update(&mut self.entity_key_cache, &mut self.input, self.player_id, &self.chunk, delta_time);
 
         if let Some(player) = self.entities.get(self.player_id) {
             self.camera
@@ -399,7 +396,7 @@ impl State {
             }
 
             self.model
-                .update_instances(&self.device, &self.entities.instances());
+                .update_instances(&self.device, self.entities.instances());
             render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
             render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.set_vertex_buffer(1, self.model.instances().slice(..));

@@ -1,21 +1,26 @@
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
 
-use crate::{actor::Actor, ai::Ai, camera::Camera, chunk::Chunk, input::Input};
+use crate::{camera::Camera, entities::Entities, entity::Entity};
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
 
 pub struct PlayerAi {}
 
-impl Ai for PlayerAi {
-    fn update(
-        &mut self,
-        actor: &mut Actor,
-        input: &mut Input,
-        _player_position: cgmath::Vector3<f32>,
-        chunk: &Chunk,
+impl PlayerAi {
+    pub fn update(
+        self_id: u32,
+        input: &mut crate::input::Input,
+        entities: &mut Entities,
+        _player_id: u32,
+        chunk: &crate::chunk::Chunk,
         delta_time: f32,
     ) {
+        //TODO Components should only run when not None
+        if !entities.is_player(self_id) {return;}
+        let entity = entities.get_mut(self_id).unwrap();
+        let Entity { actor, .. } = entity;
+
         let mut dir_z = 0.0;
         let mut dir_x = 0.0;
 

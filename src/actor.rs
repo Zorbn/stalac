@@ -1,16 +1,16 @@
-use crate::{chunk::Chunk, input::Input};
+use crate::{chunk::Chunk, input::Input, entities::Entities};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
 
 pub struct Actor {
-    speed: f32,
-    size: cgmath::Vector3<f32>,
-    position: cgmath::Vector3<f32>,
-    look_x: f32,
-    look_y: f32,
-    y_velocity: f32,
-    grounded: bool,
+    pub speed: f32,
+    pub size: cgmath::Vector3<f32>,
+    pub position: cgmath::Vector3<f32>,
+    pub look_x: f32,
+    pub look_y: f32,
+    pub y_velocity: f32,
+    pub grounded: bool,
 }
 
 impl Actor {
@@ -26,29 +26,37 @@ impl Actor {
         }
     }
 
-    pub fn update(&mut self, _input: &mut Input, chunk: &Chunk, delta_time: f32) {
-        self.grounded = chunk
+    pub fn update(self_id: u32, entities: &mut Entities, _input: &mut Input, chunk: &Chunk, delta_time: f32) {
+        let optional_actor = entities.get_mut(self_id);
+
+        if optional_actor.is_none() {
+            return;
+        }
+
+        let actor = &mut optional_actor.unwrap().actor;
+
+        actor.grounded = chunk
             .get_block_collision(
-                self.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
-                self.size,
+                actor.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
+                actor.size,
             )
             .is_some();
 
         // If the player is moving towards the ground while touching it, snap to the floor
         // and prevent y_velocity from building up over time.
-        if self.grounded && self.y_velocity < 0.0 {
-            self.snap_to_floor()
+        if actor.grounded && actor.y_velocity < 0.0 {
+            actor.snap_to_floor()
         }
 
-        self.apply_gravity(delta_time);
+        actor.apply_gravity(delta_time);
 
-        if !self.step(
+        if !actor.step(
             cgmath::Vector3::unit_y(),
-            self.y_velocity() * delta_time,
+            actor.y_velocity() * delta_time,
             chunk,
             false,
         ) {
-            self.reset_y_velocity();
+            actor.reset_y_velocity();
         }
     }
 
