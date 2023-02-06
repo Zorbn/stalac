@@ -7,6 +7,7 @@ mod chase_ai;
 mod chunk;
 mod cube_mesh;
 mod direction;
+mod entities;
 mod entity;
 mod input;
 mod instance;

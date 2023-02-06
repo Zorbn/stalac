@@ -18,7 +18,7 @@ impl Entity {
         }
     }
 
-    // Todo: Change player position to player entity_id, once that system is implemented.
+    // Todo: Change player position to entity list & player entity_id, once that system is implemented.
     pub fn update(
         &mut self,
         input: &mut Input,

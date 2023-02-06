@@ -1,6 +1,7 @@
 use crate::camera::{Camera, CameraPerspectiveProjection};
 use crate::chase_ai::ChaseAi;
 use crate::chunk::Chunk;
+use crate::entities::Entities;
 use crate::entity::Entity;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
@@ -17,7 +18,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
 use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
-use winit::window::{Window, Fullscreen};
+use winit::window::{Fullscreen, Window};
 
 /*
  * TODO:
@@ -43,8 +44,8 @@ pub struct State {
     camera: Camera,
     model: Model,
     chunk: Chunk,
-    player: Entity,
-    enemy: Entity,
+    entities: Entities,
+    player_id: u32,
 }
 
 impl State {
@@ -237,6 +238,10 @@ impl State {
             enemy.actor.teleport(enemy_spawn);
         }
 
+        let mut entities = Entities::new();
+        let player_id = entities.insert(player, true);
+        entities.insert(enemy, false);
+
         Self {
             window,
             input,
@@ -251,8 +256,8 @@ impl State {
             camera,
             model,
             chunk,
-            player,
-            enemy,
+            entities,
+            player_id,
         }
     }
 
@@ -319,20 +324,27 @@ impl State {
 
         if self.input.was_key_pressed(VirtualKeyCode::F11) {
             if self.window.fullscreen().is_none() {
-                self.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+                self.window
+                    .set_fullscreen(Some(Fullscreen::Borderless(None)));
             } else {
                 self.window.set_fullscreen(None)
             }
         }
 
-        let player_position = self.player.actor.position();
-        self.enemy
+        let player_position = match self.entities.get(self.player_id) {
+            Some(player) => player.actor.position(),
+            _ => cgmath::Vector3::zero(),
+        };
+
+        self.entities
             .update(&mut self.input, player_position, &self.chunk, delta_time);
-        self.player
-            .update(&mut self.input, player_position, &self.chunk, delta_time);
-        self.camera
-            .rotate(self.player.actor.look_x(), self.player.actor.look_y());
-        self.camera.teleport(self.player.actor.head_position());
+
+        if let Some(player) = self.entities.get(self.player_id) {
+            self.camera
+                .rotate(player.actor.look_x(), player.actor.look_y());
+            self.camera.teleport(player.actor.head_position());
+        }
+
         self.camera.update(&self.queue);
 
         self.input.update();
@@ -386,18 +398,8 @@ impl State {
                 render_pass.draw_indexed(0..model.num_indices(), 0, 0..model.num_instances());
             }
 
-            // let instance_pos = cgmath::Vector3 {
-            // x: 0.0,
-            // y: 0.0,
-            // z: 0.0,
-            // };
-            let mut instances = vec![Instance {
-                position: self.enemy.actor.position(),
-                rotation: cgmath::Quaternion::zero(),
-            }];
-            instances[0].rotate_towards(&self.camera.position());
-
-            self.model.update_instances(&self.device, &instances);
+            self.model
+                .update_instances(&self.device, &self.entities.instances());
             render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
             render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
