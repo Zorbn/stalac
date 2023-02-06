@@ -8,7 +8,14 @@ const MOUSE_SENSITIVITY: f32 = 0.1;
 pub struct PlayerAi {}
 
 impl Ai for PlayerAi {
-    fn update(&mut self, actor: &mut Actor, input: &mut Input, _player_position: cgmath::Vector3<f32>, chunk: &Chunk, delta_time: f32) {
+    fn update(
+        &mut self,
+        actor: &mut Actor,
+        input: &mut Input,
+        _player_position: cgmath::Vector3<f32>,
+        chunk: &Chunk,
+        delta_time: f32,
+    ) {
         let mut dir_z = 0.0;
         let mut dir_x = 0.0;
 

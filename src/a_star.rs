@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    chunk::{Chunk, BLOCK_SIZE},
+    chunk::{Chunk, BLOCK_SIZE, BLOCK_SIZE_F},
     direction::{dir_to_offset, index_to_dir},
 };
 
@@ -59,15 +59,19 @@ fn get_neighbors(
 
 pub fn a_star_search(
     chunk: &Chunk,
-    mut start: cgmath::Vector3<i32>,
-    mut goal: cgmath::Vector3<i32>,
+    start: cgmath::Vector3<i32>,
+    goal: cgmath::Vector3<i32>,
     came_from: &mut HashMap<cgmath::Vector3<i32>, cgmath::Vector3<i32>>,
 ) {
-    start.y = goal.y;
-    start /= BLOCK_SIZE as i32;
-    goal /= BLOCK_SIZE as i32;
+    let start = start / BLOCK_SIZE;
+    let goal = goal / BLOCK_SIZE;
 
     came_from.clear();
+
+    // Can't path to positions on a different y level.
+    if start.y != goal.y {
+        return;
+    }
 
     let mut neighbors = Vec::<cgmath::Vector3<i32>>::new();
     let mut frontier = BinaryHeap::new();
@@ -102,16 +106,20 @@ pub fn a_star_search(
 }
 
 pub fn reconstruct_path(
-    mut start: cgmath::Vector3<i32>,
-    mut goal: cgmath::Vector3<i32>,
+    start: cgmath::Vector3<i32>,
+    goal: cgmath::Vector3<i32>,
     came_from: &mut HashMap<cgmath::Vector3<i32>, cgmath::Vector3<i32>>,
     path: &mut Vec<cgmath::Vector3<f32>>,
 ) {
-    start.y = goal.y;
-    start /= BLOCK_SIZE as i32; // TODO: Fix the need for this
-    goal /= BLOCK_SIZE as i32;
+    let start = start / BLOCK_SIZE;
+    let goal = goal / BLOCK_SIZE;
 
     path.clear();
+
+    // Can't path to positions on a different y level.
+    if start.y != goal.y {
+        return;
+    }
 
     let mut current = goal;
 
@@ -121,10 +129,9 @@ pub fn reconstruct_path(
     }
 
     while current != start {
-        // path.push(current);
-        path.push(current.cast::<f32>().unwrap() * BLOCK_SIZE + cgmath::Vector3::new(0.5, 0.5, 0.5) * BLOCK_SIZE);
+        path.push(
+            (current.cast::<f32>().unwrap() + cgmath::Vector3::new(0.5, 0.5, 0.5)) * BLOCK_SIZE_F,
+        );
         current = came_from[&current];
     }
-
-    // path.reverse();
 }

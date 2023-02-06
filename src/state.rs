@@ -12,9 +12,7 @@ use crate::texture::{self, Texture};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
 use cgmath::prelude::*;
-use std::cell::RefCell;
 use std::iter::once;
-use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
@@ -320,8 +318,10 @@ impl State {
         }
 
         let player_position = self.player.actor.position();
-        self.enemy.update(&mut self.input, player_position, &self.chunk, delta_time);
-        self.player.update(&mut self.input, player_position, &self.chunk, delta_time);
+        self.enemy
+            .update(&mut self.input, player_position, &self.chunk, delta_time);
+        self.player
+            .update(&mut self.input, player_position, &self.chunk, delta_time);
         self.camera
             .rotate(self.player.actor.look_x(), self.player.actor.look_y());
         self.camera.teleport(self.player.actor.head_position());
@@ -379,9 +379,9 @@ impl State {
             }
 
             // let instance_pos = cgmath::Vector3 {
-                // x: 0.0,
-                // y: 0.0,
-                // z: 0.0,
+            // x: 0.0,
+            // y: 0.0,
+            // z: 0.0,
             // };
             let mut instances = vec![Instance {
                 position: self.enemy.actor.position(),

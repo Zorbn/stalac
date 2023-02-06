@@ -6,11 +6,12 @@ use crate::rng::Rng;
 use crate::{cube_mesh::CUBE_INDICES, vertex::Vertex};
 use cgmath::Zero;
 
-pub const BLOCK_SIZE: f32 = 3.0;
+pub const BLOCK_SIZE: i32 = 3;
+pub const BLOCK_SIZE_F: f32 = BLOCK_SIZE as f32;
 const CHUNK_SIZE: usize = 32;
 const CHUNK_HEIGHT: usize = 8;
 const CHUNK_LEN: usize = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE;
-const INV_BLOCK_SIZE: f32 = 1.0 / BLOCK_SIZE;
+const INV_BLOCK_SIZE: f32 = 1.0 / BLOCK_SIZE as f32;
 
 pub struct Chunk {
     pub model: Option<Model>,
@@ -77,9 +78,9 @@ impl Chunk {
 
                         for vert_i in 0..4 {
                             let mut vert = CUBE_VERTICES[dir_i][vert_i];
-                            vert.position[0] = (vert.position[0] + ix as f32) * BLOCK_SIZE;
-                            vert.position[1] = (vert.position[1] + iy as f32) * BLOCK_SIZE;
-                            vert.position[2] = (vert.position[2] + iz as f32) * BLOCK_SIZE;
+                            vert.position[0] = (vert.position[0] + ix as f32) * BLOCK_SIZE_F;
+                            vert.position[1] = (vert.position[1] + iy as f32) * BLOCK_SIZE_F;
+                            vert.position[2] = (vert.position[2] + iz as f32) * BLOCK_SIZE_F;
                             self.vertices.push(vert);
                         }
 
@@ -191,9 +192,9 @@ impl Chunk {
             }
 
             return Some(cgmath::Vector3::new(
-                (x as f32 + 0.5) * BLOCK_SIZE,
-                (y as f32 + 0.5) * BLOCK_SIZE,
-                (z as f32 + 0.5) * BLOCK_SIZE,
+                (x as f32 + 0.5) * BLOCK_SIZE_F,
+                (y as f32 + 0.5) * BLOCK_SIZE_F,
+                (z as f32 + 0.5) * BLOCK_SIZE_F,
             ));
         }
 

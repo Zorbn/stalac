@@ -19,7 +19,13 @@ impl Entity {
     }
 
     // Todo: Change player position to player entity_id, once that system is implemented.
-    pub fn update(&mut self, input: &mut Input, player_position: cgmath::Vector3<f32>, chunk: &Chunk, delta_time: f32) {
+    pub fn update(
+        &mut self,
+        input: &mut Input,
+        player_position: cgmath::Vector3<f32>,
+        chunk: &Chunk,
+        delta_time: f32,
+    ) {
         let Entity { actor, ai } = self;
 
         actor.update(input, chunk, delta_time);

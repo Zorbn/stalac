@@ -1,7 +1,10 @@
-use std::collections::HashMap;
 use cgmath::prelude::*;
+use std::collections::HashMap;
 
-use crate::{ai::Ai, a_star::{a_star_search, reconstruct_path}};
+use crate::{
+    a_star::{a_star_search, reconstruct_path},
+    ai::Ai,
+};
 
 const REPATH_TIME: f32 = 1.0;
 
@@ -24,7 +27,14 @@ impl ChaseAi {
 impl Ai for ChaseAi {
     // TODO: When the ai is at the closest tile, run directly towards the player (no pathing)
     // until they are touching (within a constant distance, maybe 1m)
-    fn update(&mut self, actor: &mut crate::actor::Actor, _input: &mut crate::input::Input, player_position: cgmath::Vector3<f32>, chunk: &crate::chunk::Chunk, delta_time: f32) {
+    fn update(
+        &mut self,
+        actor: &mut crate::actor::Actor,
+        _input: &mut crate::input::Input,
+        player_position: cgmath::Vector3<f32>,
+        chunk: &crate::chunk::Chunk,
+        delta_time: f32,
+    ) {
         self.repath_timer += delta_time;
 
         let position = actor.position();
@@ -43,7 +53,6 @@ impl Ai for ChaseAi {
         if let Some(next) = self.next {
             let next_f = next.cast::<f32>().unwrap();
 
-            // TODO: Improve destinction between 2d and 3d space in pathfinder.
             let x_dist = next_f.x - position.x;
             let z_dist = next_f.z - position.z;
             if (x_dist * x_dist + z_dist * z_dist).sqrt() < 0.5 {
@@ -51,7 +60,8 @@ impl Ai for ChaseAi {
                 return;
             }
 
-            let dir = cgmath::Vector3::new(next_f.x - position.x, 0.0, next_f.z - position.z).normalize();
+            let dir =
+                cgmath::Vector3::new(next_f.x - position.x, 0.0, next_f.z - position.z).normalize();
             actor.step(dir, 4.0 * delta_time, chunk, true);
         } else {
             self.next = self.path.pop();
