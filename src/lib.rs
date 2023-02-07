@@ -7,7 +7,6 @@ mod chunk;
 mod cube_mesh;
 mod direction;
 mod entities;
-mod entity;
 mod input;
 mod instance;
 mod math;

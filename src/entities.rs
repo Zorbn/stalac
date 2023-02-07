@@ -1,12 +1,14 @@
 use cgmath::prelude::*;
-use std::{collections::{HashMap, HashSet}, cell::RefCell, rc::Rc};
+use std::collections::{HashMap, HashSet};
 
-use crate::{chunk::Chunk, entity::Entity, input::Input, instance::Instance};
+use crate::{chunk::Chunk, input::Input, instance::Instance, actor::Actor, chase_ai::ChaseAi, player_ai::{PlayerAi}};
 
 pub struct Entities {
-    data: HashMap<u32, Entity>,
+    pub actor: HashMap<u32, Actor>,
+    pub chase_ai: HashMap<u32, ChaseAi>,
+    pub player_ai: HashMap<u32, PlayerAi>,
+
     instances: Vec<Instance>,
-    player_ids: HashSet<u32>,
     next_id: u32,
     keys: Vec<u32>,
 }
@@ -14,46 +16,42 @@ pub struct Entities {
 impl Entities {
     pub fn new() -> Self {
         Self {
-            data: HashMap::new(),
-            player_ids: HashSet::new(),
+            actor: HashMap::new(),
+            chase_ai: HashMap::new(),
+            player_ai: HashMap::new(),
             next_id: 0,
             instances: Vec::new(),
             keys: Vec::new(),
         }
     }
 
-    pub fn insert(&mut self, entity: Entity, is_player: bool) -> u32 {
+    pub fn insert(&mut self, actor: Actor,
+        chase_ai: Option<ChaseAi>,
+        player_ai: Option<PlayerAi>) -> u32 {
         let id = self.next_id;
         self.next_id += 1;
 
-        self.data.insert(id, entity);
+        self.actor.insert(id, actor);
 
-        if is_player {
-            self.player_ids.insert(id);
+        if let Some(chase_ai) = chase_ai {
+            self.chase_ai.insert(id, chase_ai);
+        }
+
+        if let Some(player_ai) = player_ai {
+            self.player_ai.insert(id, player_ai);
         }
 
         id
     }
 
     pub fn remove(&mut self, id: u32) {
-        self.data.remove(&id);
-        self.player_ids.remove(&id);
-    }
-
-    pub fn get_mut(&mut self, id: u32) -> Option<&mut Entity> {
-        self.data.get_mut(&id)
-    }
-
-    pub fn get(&self, id: u32) -> Option<&Entity> {
-        self.data.get(&id)
-    }
-
-    pub fn is_player(&self, id: u32) -> bool {
-        self.player_ids.contains(&id)
+        self.actor.remove(&id);
+        self.chase_ai.remove(&id);
+        self.player_ai.remove(&id);
     }
 
     pub fn contains(&self, id: u32) -> bool {
-        self.data.contains_key(&id)
+        self.actor.contains_key(&id)
     }
 
     pub fn update(
@@ -68,21 +66,27 @@ impl Entities {
 
         entity_key_cache.clear();
 
-        for id in self.data.keys() {
+        for id in self.actor.keys() {
             entity_key_cache.push(*id);
         }
 
-        let player_position = self.get(player_id).expect("Player not found!").actor.position();
+        let player_position = self.actor.get(&player_id).expect("Player not found!").position();
 
         for id in entity_key_cache {
-            Entity::update(*id, input, self, player_id, chunk, delta_time);
+            // Entity::update(*id, input, self, player_id, chunk, delta_time);
+            Actor::update(*id, self, input, chunk, delta_time);
 
-            if self.player_ids.contains(id) {
+            if self.chase_ai.contains_key(id) {
+                ChaseAi::update(*id, input, self, player_id, chunk, delta_time);
+            }
+
+            if self.player_ai.contains_key(id) {
+                PlayerAi::update(*id, input, self, player_id, chunk, delta_time);
                 continue;
             }
 
             let mut instance = Instance {
-                position: self.data.get(id).unwrap().actor.position(),
+                position: self.actor.get(id).unwrap().position(),
                 rotation: cgmath::Quaternion::zero(),
             };
 

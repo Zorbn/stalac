@@ -1,8 +1,8 @@
+use crate::actor::Actor;
 use crate::camera::{Camera, CameraPerspectiveProjection};
 use crate::chase_ai::ChaseAi;
 use crate::chunk::Chunk;
 use crate::entities::Entities;
-use crate::entity::Entity;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
@@ -215,34 +215,30 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
-        let mut player = Entity::new(
+        let mut player_actor = Actor::new(
             cgmath::Vector3::zero(),
             cgmath::Vector3::new(0.5, 0.8, 0.5),
             6.0,
-            None,
-            Some(PlayerAi {}),
         );
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
-            player.actor.teleport(player_spawn);
+            player_actor.teleport(player_spawn);
         }
 
-        let mut enemy = Entity::new(
+        let mut enemy_actor = Actor::new(
             cgmath::Vector3::zero(),
             cgmath::Vector3::new(0.5, 0.8, 0.5),
             6.0,
-            Some(ChaseAi::new()),
-            None,
         );
 
         if let Some(enemy_spawn) = chunk.get_spawn_position(&mut rng) {
-            enemy.actor.teleport(enemy_spawn);
+            enemy_actor.teleport(enemy_spawn);
         }
 
         let mut entities = Entities::new();
         let entity_key_cache = Vec::new();
-        entities.insert(enemy, false);
-        let player_id = entities.insert(player, true);
+        entities.insert(enemy_actor, Some(ChaseAi::new()), None);
+        let player_id = entities.insert(player_actor, None, Some(PlayerAi {}));
 
         Self {
             window,
@@ -336,10 +332,10 @@ impl State {
 
         self.entities.update(&mut self.entity_key_cache, &mut self.input, self.player_id, &self.chunk, delta_time);
 
-        if let Some(player) = self.entities.get(self.player_id) {
+        if let Some(player) = self.entities.actor.get(&self.player_id) {
             self.camera
-                .rotate(player.actor.look_x(), player.actor.look_y());
-            self.camera.teleport(player.actor.head_position());
+                .rotate(player.look_x(), player.look_y());
+            self.camera.teleport(player.head_position());
         }
 
         self.camera.update(&self.queue);

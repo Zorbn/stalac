@@ -27,13 +27,7 @@ impl Actor {
     }
 
     pub fn update(self_id: u32, entities: &mut Entities, _input: &mut Input, chunk: &Chunk, delta_time: f32) {
-        let optional_actor = entities.get_mut(self_id);
-
-        if optional_actor.is_none() {
-            return;
-        }
-
-        let actor = &mut optional_actor.unwrap().actor;
+        let actor = entities.actor.get_mut(&self_id).unwrap();
 
         actor.grounded = chunk
             .get_block_collision(

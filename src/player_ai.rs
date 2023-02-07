@@ -1,7 +1,7 @@
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
 
-use crate::{camera::Camera, entities::Entities, entity::Entity};
+use crate::{camera::Camera, entities::Entities};
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
 
@@ -16,10 +16,7 @@ impl PlayerAi {
         chunk: &crate::chunk::Chunk,
         delta_time: f32,
     ) {
-        //TODO Components should only run when not None
-        if !entities.is_player(self_id) {return;}
-        let entity = entities.get_mut(self_id).unwrap();
-        let Entity { actor, .. } = entity;
+        let actor = entities.actor.get_mut(&self_id).unwrap();
 
         let mut dir_z = 0.0;
         let mut dir_x = 0.0;
