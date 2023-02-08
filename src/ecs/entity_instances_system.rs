@@ -1,7 +1,12 @@
 use std::borrow::BorrowMut;
 
-use crate::{actor::Actor, ecs::System, instance::Instance};
+use crate::{chunk::Chunk, input::Input, gfx::instance::Instance};
 use cgmath::prelude::*;
+
+use super::{
+    actor::Actor,
+    ecs::{EntityManager, System},
+};
 
 pub struct EntityInstancesSystem {
     entity_instances: Vec<Instance>,
@@ -22,12 +27,12 @@ impl EntityInstancesSystem {
 impl System for EntityInstancesSystem {
     fn update(
         &mut self,
-        ecs: &mut crate::ecs::EntityManager,
-        entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
+        ecs: &mut EntityManager,
+        _entity_cache: &mut Vec<usize>,
+        _chunk: &Chunk,
+        _input: &mut Input,
         player: usize,
-        delta_time: f32,
+        _delta_time: f32,
     ) {
         self.entity_instances.clear();
 

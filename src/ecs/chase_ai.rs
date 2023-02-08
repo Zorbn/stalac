@@ -3,6 +3,11 @@ use std::{borrow::BorrowMut, collections::HashMap};
 
 use crate::{
     a_star::{a_star_search, reconstruct_path},
+    chunk::Chunk,
+    input::Input,
+};
+
+use super::{
     actor::Actor,
     ecs::{EntityManager, System},
 };
@@ -10,9 +15,9 @@ use crate::{
 const REPATH_TIME: f32 = 1.0;
 
 pub struct ChaseAi {
-    pub repath_timer: f32,
-    pub path: Vec<cgmath::Vector3<f32>>,
-    pub next: Option<cgmath::Vector3<f32>>,
+    repath_timer: f32,
+    path: Vec<cgmath::Vector3<f32>>,
+    next: Option<cgmath::Vector3<f32>>,
 }
 
 impl ChaseAi {
@@ -34,8 +39,8 @@ impl System for ChaseAiSystem {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
+        chunk: &Chunk,
+        _input: &mut Input,
         player: usize,
         delta_time: f32,
     ) {

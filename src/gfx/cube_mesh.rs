@@ -1,4 +1,4 @@
-use crate::vertex::Vertex;
+use super::vertex::Vertex;
 
 pub const CUBE_VERTICES: [[Vertex; 4]; 6] = [
     [

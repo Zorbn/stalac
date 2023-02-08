@@ -1,20 +1,18 @@
-use crate::{
-    chunk::Chunk,
-    ecs::{EntityManager, System},
-    input::Input,
-};
+use crate::{chunk::Chunk, input::Input};
+
+use super::ecs::{EntityManager, System};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
 
 pub struct Actor {
-    pub speed: f32,
-    pub size: cgmath::Vector3<f32>,
-    pub position: cgmath::Vector3<f32>,
-    pub look_x: f32,
-    pub look_y: f32,
-    pub y_velocity: f32,
-    pub grounded: bool,
+    speed: f32,
+    size: cgmath::Vector3<f32>,
+    position: cgmath::Vector3<f32>,
+    look_x: f32,
+    look_y: f32,
+    y_velocity: f32,
+    grounded: bool,
 }
 
 impl Actor {
@@ -120,10 +118,10 @@ impl System for ActorSystem {
     fn update(
         &mut self,
         ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
-        player: usize,
+        _entity_cache: &mut Vec<usize>,
+        chunk: &Chunk,
+        _input: &mut Input,
+        _player: usize,
         delta_time: f32,
     ) {
         let mut actors = ecs.borrow_components::<Actor>().unwrap();

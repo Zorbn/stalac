@@ -1,24 +1,12 @@
 mod a_star;
-mod actor;
 mod bytes;
-mod camera;
-mod chase_ai;
 mod chunk;
-mod cube_mesh;
 mod direction;
 mod ecs;
-mod entity_instances_system;
 mod input;
-mod instance;
-mod math;
-mod model;
-mod player_ai;
 mod rng;
-mod sprite_mesh;
 mod state;
-mod texture;
-mod texture_array;
-mod vertex;
+mod gfx;
 
 use std::time::Instant;
 

@@ -1,31 +1,32 @@
 use std::borrow::BorrowMut;
 
-use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
+use cgmath::prelude::*;
 
-use crate::{
+use crate::{chunk::Chunk, input::Input, gfx::camera::Camera};
+
+use super::{
     actor::Actor,
-    camera::Camera,
     ecs::{EntityManager, System},
 };
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
 
-pub struct PlayerAi {}
+pub struct Player {}
 
-pub struct PlayerAiSystem {}
+pub struct PlayerMovementSystem {}
 
-impl System for PlayerAiSystem {
+impl System for PlayerMovementSystem {
     fn update(
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
-        player: usize,
+        chunk: &Chunk,
+        input: &mut Input,
+        _player: usize,
         delta_time: f32,
     ) {
-        ecs.get_entities_with::<PlayerAi, Actor>(entity_cache);
+        ecs.get_entities_with::<Player, Actor>(entity_cache);
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
         for id in entity_cache {

@@ -1,9 +1,9 @@
-use crate::cube_mesh::CUBE_VERTICES;
 use crate::direction::{dir_to_offset, index_to_dir};
-use crate::instance::Instance;
-use crate::model::Model;
+use crate::gfx::cube_mesh::{CUBE_VERTICES, CUBE_INDICES};
+use crate::gfx::instance::Instance;
+use crate::gfx::model::Model;
+use crate::gfx::vertex::Vertex;
 use crate::rng::Rng;
-use crate::{cube_mesh::CUBE_INDICES, vertex::Vertex};
 use cgmath::Zero;
 
 pub const BLOCK_SIZE: i32 = 3;

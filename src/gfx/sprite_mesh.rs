@@ -1,4 +1,4 @@
-use crate::vertex::Vertex;
+use super::vertex::Vertex;
 
 pub const SPRITE_VERTICES: &[Vertex] = &[
     Vertex {

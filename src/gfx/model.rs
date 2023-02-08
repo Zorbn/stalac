@@ -1,5 +1,8 @@
-use crate::{bytes::to_bytes, instance::Instance, vertex::Vertex};
+use crate::bytes::to_bytes;
+use super::instance::Instance;
 use wgpu::util::DeviceExt;
+
+use super::vertex::Vertex;
 
 pub struct Model {
     pub vertices: wgpu::Buffer,

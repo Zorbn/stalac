@@ -1,4 +1,4 @@
-use crate::texture;
+use super::texture;
 use std::num::NonZeroU32;
 
 pub struct TextureArray {

@@ -1,18 +1,18 @@
-use crate::actor::{Actor, ActorSystem};
-use crate::camera::{Camera, CameraPerspectiveProjection};
-use crate::chase_ai::{ChaseAi, ChaseAiSystem};
 use crate::chunk::Chunk;
-use crate::ecs::{EntityManager, SystemManager};
-use crate::entity_instances_system::{self, EntityInstancesSystem};
+use crate::ecs::actor::{Actor, ActorSystem};
+use crate::ecs::chase_ai::{ChaseAi, ChaseAiSystem};
+use crate::ecs::ecs::{EntityManager, SystemManager};
+use crate::ecs::entity_instances_system::EntityInstancesSystem;
+use crate::ecs::player::{Player, PlayerMovementSystem};
+use crate::gfx::camera::{Camera, CameraPerspectiveProjection};
+use crate::gfx::instance::{InstanceRaw, Instance};
+use crate::gfx::model::Model;
+use crate::gfx::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
+use crate::gfx::texture::{Texture, self};
+use crate::gfx::texture_array::TextureArray;
+use crate::gfx::vertex::Vertex;
 use crate::input::Input;
-use crate::instance::{Instance, InstanceRaw};
-use crate::model::Model;
-use crate::player_ai::{PlayerAi, PlayerAiSystem};
 use crate::rng::Rng;
-use crate::sprite_mesh::{SPRITE_INDICES, SPRITE_VERTICES};
-use crate::texture::{self, Texture};
-use crate::texture_array::TextureArray;
-use crate::vertex::Vertex;
 use cgmath::prelude::*;
 use std::borrow::BorrowMut;
 use std::iter::once;
@@ -108,7 +108,7 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("gfx/shader.wgsl").into()),
         });
 
         let camera = Camera::new(
@@ -241,7 +241,7 @@ impl State {
         let mut ecs = EntityManager::new();
         let player = ecs.add_entity();
         ecs.add_component_to_entity(player, player_actor);
-        ecs.add_component_to_entity(player, PlayerAi {});
+        ecs.add_component_to_entity(player, Player {});
         let enemy = ecs.add_entity();
         ecs.add_component_to_entity(enemy, enemy_actor);
         ecs.add_component_to_entity(enemy, ChaseAi::new());
@@ -249,7 +249,7 @@ impl State {
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});
         systems.add_system(ChaseAiSystem {});
-        systems.add_system(PlayerAiSystem {});
+        systems.add_system(PlayerMovementSystem {});
         systems.add_system(EntityInstancesSystem::new());
 
         Self {
