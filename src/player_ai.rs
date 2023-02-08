@@ -3,27 +3,33 @@ use std::borrow::BorrowMut;
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
 
-use crate::{actor::Actor, camera::Camera, ecs::Ecs};
+use crate::{
+    actor::Actor,
+    camera::Camera,
+    ecs::{EntityManager, System},
+};
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
 
 pub struct PlayerAi {}
 
-impl PlayerAi {
-    pub fn update(
-        // self_id: u32,
-        input: &mut crate::input::Input,
-        ecs: &mut Ecs,
+pub struct PlayerAiSystem {}
+
+impl System for PlayerAiSystem {
+    fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
         chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
         delta_time: f32,
     ) {
-        // let actor = entities.actor.get_mut(&self_id).unwrap();
-
-        let ids = ecs.get_ids_with::<PlayerAi, Actor>(); // TODO: This can't run after actors, is that an issue?
+        ecs.get_entities_with::<PlayerAi, Actor>(entity_cache);
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for id in ids {
-            let actor = actors.borrow_mut().get(id).unwrap(); // TODO: Can borrow mut be outside loop?
+        for id in entity_cache {
+            let actor = actors.borrow_mut().get(*id).unwrap();
 
             let mut dir_z = 0.0;
             let mut dir_x = 0.0;

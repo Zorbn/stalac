@@ -4,7 +4,7 @@ use std::{borrow::BorrowMut, collections::HashMap};
 use crate::{
     a_star::{a_star_search, reconstruct_path},
     actor::Actor,
-    ecs::Ecs,
+    ecs::{EntityManager, System},
 };
 
 const REPATH_TIME: f32 = 1.0;
@@ -25,36 +25,35 @@ impl ChaseAi {
     }
 }
 
-// TODO: Convert these to systems.
-impl ChaseAi {
+pub struct ChaseAiSystem {}
+
+impl System for ChaseAiSystem {
     // TODO: When the ai is at the closest tile, run directly towards the player (no pathing)
     // until they are touching (within a constant distance, maybe 1m)
-    pub fn update(
-        // self_id: usize,
-        _input: &mut crate::input::Input,
-        ecs: &mut Ecs,
-        player_id: usize,
+    fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
         chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
         delta_time: f32,
     ) {
         let player_position = ecs
             .borrow_components::<Actor>()
             .unwrap()
             .borrow_mut()
-            .get(player_id)
+            .get(player)
             .unwrap()
             .position();
 
-        // let ais = ecs.borrow_components::<ChaseAi>().unwrap();
-        // let actors = ecs.borrow_components::<Actor>().unwrap().borrow_mut().get(player_id).unwrap().position();
-
-        let ids = ecs.get_ids_with::<ChaseAi, Actor>();
+        ecs.get_entities_with::<ChaseAi, Actor>(entity_cache);
         let mut ais = ecs.borrow_components::<ChaseAi>().unwrap();
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for id in ids {
-            let ai = ais.borrow_mut().get(id).unwrap();
-            let actor = actors.borrow_mut().get(id).unwrap();
+        for id in entity_cache {
+            let ai = ais.borrow_mut().get(*id).unwrap();
+            let actor = actors.borrow_mut().get(*id).unwrap();
 
             ai.repath_timer += delta_time;
 

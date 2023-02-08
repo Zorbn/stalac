@@ -1,12 +1,13 @@
-use crate::actor::Actor;
+use crate::actor::{Actor, ActorSystem};
 use crate::camera::{Camera, CameraPerspectiveProjection};
-use crate::chase_ai::ChaseAi;
+use crate::chase_ai::{ChaseAi, ChaseAiSystem};
 use crate::chunk::Chunk;
-use crate::ecs::Ecs;
+use crate::ecs::{EntityManager, SystemManager};
+use crate::entity_instances_system::{self, EntityInstancesSystem};
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
-use crate::player_ai::PlayerAi;
+use crate::player_ai::{PlayerAi, PlayerAiSystem};
 use crate::rng::Rng;
 use crate::sprite_mesh::{SPRITE_INDICES, SPRITE_VERTICES};
 use crate::texture::{self, Texture};
@@ -45,10 +46,10 @@ pub struct State {
     camera: Camera,
     model: Model,
     chunk: Chunk,
-    ecs: Ecs,
-    // entity_key_cache: Vec<u32>,
-    player_id: usize,
-    entity_instances: Vec<Instance>, // TODO: This should be its own system
+    ecs: EntityManager,
+    systems: SystemManager,
+    player: usize,
+    entity_cache: Vec<usize>,
 }
 
 impl State {
@@ -237,16 +238,19 @@ impl State {
             enemy_actor.teleport(enemy_spawn);
         }
 
-        let mut ecs = Ecs::new();
-        // let entity_key_cache = Vec::new();
-        let player_id = ecs.add_entity(); // TODO: Maybe rename all entity_ids to be just entities?
-        ecs.add_component_to_entity(player_id, player_actor);
-        ecs.add_component_to_entity(player_id, PlayerAi {});
-        let enemy_id = ecs.add_entity();
-        ecs.add_component_to_entity(enemy_id, enemy_actor);
-        ecs.add_component_to_entity(enemy_id, ChaseAi::new());
-        // entities.insert(enemy_actor, Some(ChaseAi::new()), None);
-        // let player_id = entities.insert(player_actor, None, Some(PlayerAi {}));
+        let mut ecs = EntityManager::new();
+        let player = ecs.add_entity();
+        ecs.add_component_to_entity(player, player_actor);
+        ecs.add_component_to_entity(player, PlayerAi {});
+        let enemy = ecs.add_entity();
+        ecs.add_component_to_entity(enemy, enemy_actor);
+        ecs.add_component_to_entity(enemy, ChaseAi::new());
+
+        let mut systems = SystemManager::new();
+        systems.add_system(ActorSystem {});
+        systems.add_system(ChaseAiSystem {});
+        systems.add_system(PlayerAiSystem {});
+        systems.add_system(EntityInstancesSystem::new());
 
         Self {
             window,
@@ -263,9 +267,9 @@ impl State {
             model,
             chunk,
             ecs,
-            // entity_key_cache,
-            player_id,
-            entity_instances: Vec::new(),
+            systems,
+            player,
+            entity_cache: Vec::new(),
         }
     }
 
@@ -339,22 +343,21 @@ impl State {
             }
         }
 
-        Actor::update(&mut self.ecs, &mut self.input, &self.chunk, delta_time);
-        ChaseAi::update(
-            &mut self.input,
+        self.systems.update(
             &mut self.ecs,
-            self.player_id,
+            &mut self.entity_cache,
             &self.chunk,
+            &mut self.input,
+            self.player,
             delta_time,
         );
-        PlayerAi::update(&mut self.input, &mut self.ecs, &self.chunk, delta_time);
 
         if let Some(player) = self
             .ecs
             .borrow_components::<Actor>()
             .unwrap()
             .borrow_mut()
-            .get(self.player_id)
+            .get(self.player)
         {
             self.camera.rotate(player.look_x(), player.look_y());
             self.camera.teleport(player.head_position());
@@ -413,37 +416,10 @@ impl State {
                 render_pass.draw_indexed(0..model.num_indices(), 0, 0..model.num_instances());
             }
 
-            // TODO: Move this to a system
-
-            self.entity_instances.clear();
-
-            // let player_position = cgmath::Vector3::<f32>::zero();
-
-            let player_position = self
-                .ecs
-                .borrow_components::<Actor>()
-                .unwrap()
-                .borrow_mut()
-                .get(self.player_id)
-                .unwrap()
-                .position();
-            let mut actors = self.ecs.borrow_components::<Actor>().unwrap();
-
-            for actor in actors.get_all() {
-                let mut instance = Instance {
-                    position: actor.position(),
-                    rotation: cgmath::Quaternion::zero(),
-                };
-
-                instance.rotate_towards(&player_position);
-
-                self.entity_instances.push(instance);
-            }
-
-            // ENDTODO
+            let entity_instances_system = self.systems.get::<EntityInstancesSystem>().unwrap();
 
             self.model
-                .update_instances(&self.device, &self.entity_instances);
+                .update_instances(&self.device, entity_instances_system.instances());
             render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
             render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.set_vertex_buffer(1, self.model.instances().slice(..));

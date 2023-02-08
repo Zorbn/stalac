@@ -7,7 +7,7 @@ mod chunk;
 mod cube_mesh;
 mod direction;
 mod ecs;
-mod entities;
+mod entity_instances_system;
 mod input;
 mod instance;
 mod math;

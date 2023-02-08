@@ -1,4 +1,8 @@
-use crate::{chunk::Chunk, ecs::Ecs, input::Input};
+use crate::{
+    chunk::Chunk,
+    ecs::{EntityManager, System},
+    input::Input,
+};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
@@ -23,42 +27,6 @@ impl Actor {
             look_y: 0.0,
             y_velocity: 0.0,
             grounded: false,
-        }
-    }
-
-    pub fn update(
-        // self_id: u32,
-        ecs: &mut Ecs,
-        _input: &mut Input,
-        chunk: &Chunk,
-        delta_time: f32,
-    ) {
-        let mut actors = ecs.borrow_components::<Actor>().unwrap();
-
-        for actor in actors.get_all() {
-            actor.grounded = chunk
-                .get_block_collision(
-                    actor.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
-                    actor.size,
-                )
-                .is_some();
-
-            // If the player is moving towards the ground while touching it, snap to the floor
-            // and prevent y_velocity from building up over time.
-            if actor.grounded && actor.y_velocity < 0.0 {
-                actor.snap_to_floor()
-            }
-
-            actor.apply_gravity(delta_time);
-
-            if !actor.step(
-                cgmath::Vector3::unit_y(),
-                actor.y_velocity() * delta_time,
-                chunk,
-                false,
-            ) {
-                actor.reset_y_velocity();
-            }
         }
     }
 
@@ -143,5 +111,47 @@ impl Actor {
 
     pub fn grounded(&self) -> bool {
         self.grounded
+    }
+}
+
+pub struct ActorSystem {}
+
+impl System for ActorSystem {
+    fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
+        chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
+        delta_time: f32,
+    ) {
+        let mut actors = ecs.borrow_components::<Actor>().unwrap();
+
+        for actor in actors.get_all() {
+            actor.grounded = chunk
+                .get_block_collision(
+                    actor.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
+                    actor.size,
+                )
+                .is_some();
+
+            // If the player is moving towards the ground while touching it, snap to the floor
+            // and prevent y_velocity from building up over time.
+            if actor.grounded && actor.y_velocity < 0.0 {
+                actor.snap_to_floor()
+            }
+
+            actor.apply_gravity(delta_time);
+
+            if !actor.step(
+                cgmath::Vector3::unit_y(),
+                actor.y_velocity() * delta_time,
+                chunk,
+                false,
+            ) {
+                actor.reset_y_velocity();
+            }
+        }
     }
 }

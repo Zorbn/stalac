@@ -1,65 +1,67 @@
 use std::{
     cell::{RefCell, RefMut},
-    collections::HashMap,
+    collections::HashMap, ops::Deref,
 };
 
-pub struct Ecs {
+use crate::entity_instances_system::EntityInstancesSystem;
+
+pub struct EntityManager {
     entities_count: usize,
-    component_stores: Vec<Box<dyn ComponentManager>>,
+    component_managers: Vec<Box<dyn ComponentManager>>,
 }
 
-impl Ecs {
+impl EntityManager {
     pub fn new() -> Self {
         Self {
             entities_count: 0,
-            component_stores: Vec::new(),
+            component_managers: Vec::new(),
         }
     }
 
     pub fn add_entity(&mut self) -> usize {
-        let entity_id = self.entities_count;
+        let entity = self.entities_count;
         self.entities_count += 1;
-        entity_id
+        entity
     }
 
-    pub fn remove_entity<T: 'static>(&mut self, entity_id: usize) {
-        for component_store in self.component_stores.iter_mut() {
-            component_store.remove(entity_id);
+    pub fn remove_entity<T: 'static>(&mut self, entity: usize) {
+        for component_store in self.component_managers.iter_mut() {
+            component_store.remove(entity);
         }
     }
 
-    pub fn add_component_to_entity<T: 'static>(&mut self, entity_id: usize, component: T) {
-        for component_store in self.component_stores.iter_mut() {
+    pub fn add_component_to_entity<T: 'static>(&mut self, entity: usize, component: T) {
+        for component_store in self.component_managers.iter_mut() {
             if let Some(component_store) = component_store
                 .as_any_mut()
                 .downcast_mut::<RefCell<ComponentStore<T>>>()
             {
-                component_store.get_mut().add(entity_id, component);
+                component_store.get_mut().add(entity, component);
                 return;
             }
         }
 
         // There wasn't an existing place to store this component, create one.
         let mut new_component_store = ComponentStore::<T>::new();
-        new_component_store.add(entity_id, component);
-        self.component_stores
+        new_component_store.add(entity, component);
+        self.component_managers
             .push(Box::new(RefCell::new(new_component_store)));
     }
 
-    pub fn remove_component_from_entity<T: 'static>(&mut self, entity_id: usize) {
-        for component_store in self.component_stores.iter_mut() {
+    pub fn remove_component_from_entity<T: 'static>(&mut self, entity: usize) {
+        for component_store in self.component_managers.iter_mut() {
             if let Some(component_store) = component_store
                 .as_any_mut()
                 .downcast_mut::<RefCell<ComponentStore<T>>>()
             {
-                component_store.get_mut().remove(entity_id);
+                component_store.get_mut().remove(entity);
                 return;
             }
         }
     }
 
     pub fn borrow_components<T: 'static>(&self) -> Option<RefMut<ComponentStore<T>>> {
-        for component_store in self.component_stores.iter() {
+        for component_store in self.component_managers.iter() {
             if let Some(component_store) = component_store
                 .as_any()
                 .downcast_ref::<RefCell<ComponentStore<T>>>()
@@ -71,77 +73,114 @@ impl Ecs {
         None
     }
 
-    pub fn get_ids_with<T1: 'static, T2: 'static>(&self) -> Vec<usize> {
+    pub fn get_entities_with<T1: 'static, T2: 'static>(&self, entities: &mut Vec<usize>) {
         let first_store = self.borrow_components::<T1>();
         let second_store = self.borrow_components::<T2>();
 
-        let mut entity_id_cache = Vec::new(); // TODO: Pass this to function.
-
-        entity_id_cache.clear();
+        entities.clear();
 
         if first_store.is_none() || second_store.is_none() {
-            return entity_id_cache;
+            return;
         }
 
         let first_store = first_store.unwrap();
         let second_store = second_store.unwrap();
 
-        for entity_id in &first_store.entity_ids {
-            if second_store.has(*entity_id) {
-                entity_id_cache.push(*entity_id);
+        for entity in &first_store.entities {
+            if second_store.has(*entity) {
+                entities.push(*entity);
+            }
+        }
+    }
+}
+
+pub struct SystemManager {
+    systems: Vec<Box<dyn SystemStoreTrait>>,
+}
+
+impl SystemManager {
+    pub fn new() -> Self {
+        Self {
+            systems: Vec::new(),
+        }
+    }
+
+    pub fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
+        chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
+        delta_time: f32,
+    ) {
+        for system in &mut self.systems {
+            system.update(ecs, entity_cache, chunk, input, player, delta_time);
+        }
+    }
+
+    pub fn add_system<T: 'static + System>(&mut self, system: T) {
+        self.systems.push(Box::new(SystemStore::new(system)));
+    }
+
+    pub fn get<T: 'static>(&mut self) -> Option<&T> {
+        for system in self.systems.iter() {
+            if let Some(system) = system.as_any()
+                .downcast_ref::<SystemStore<T>>()
+            {
+                return Some(&system.system); // TODO: Fix all the stupid naming for system stuff (system.system names of system traits and structs).
             }
         }
 
-        entity_id_cache
+        None
     }
 }
 
 pub struct ComponentStore<T> {
     components: Vec<T>,
-    entity_ids: Vec<usize>,
-    entity_id_map: HashMap<usize, usize>,
+    entities: Vec<usize>,
+    entity_map: HashMap<usize, usize>,
 }
 
 impl<T> ComponentStore<T> {
     pub fn new() -> Self {
         Self {
             components: Vec::new(),
-            entity_ids: Vec::new(),
-            entity_id_map: HashMap::new(),
+            entities: Vec::new(),
+            entity_map: HashMap::new(),
         }
     }
 
-    pub fn add(&mut self, entity_id: usize, component: T) {
-        if self.has(entity_id) {
+    pub fn add(&mut self, entity: usize, component: T) {
+        if self.has(entity) {
             return;
         }
 
         self.components.push(component);
-        self.entity_ids.push(entity_id);
-        self.entity_id_map
-            .insert(entity_id, self.components.len() - 1);
+        self.entities.push(entity);
+        self.entity_map.insert(entity, self.components.len() - 1);
     }
 
-    pub fn remove(&mut self, entity_id: usize) {
-        if !self.has(entity_id) {
+    pub fn remove(&mut self, entity: usize) {
+        if !self.has(entity) {
             return;
         }
 
-        let index = *self.entity_id_map.get(&entity_id).unwrap();
+        let index = *self.entity_map.get(&entity).unwrap();
         // Remove this component, and move the last component in the store into its place.
-        self.entity_id_map
-            .insert(*self.entity_ids.last().unwrap(), index);
+        self.entity_map
+            .insert(*self.entities.last().unwrap(), index);
         self.components.swap_remove(index);
-        self.entity_ids.swap_remove(index);
-        self.entity_id_map.remove(&entity_id);
+        self.entities.swap_remove(index);
+        self.entity_map.remove(&entity);
     }
 
-    pub fn has(&self, entity_id: usize) -> bool {
-        self.entity_id_map.contains_key(&entity_id)
+    pub fn has(&self, entity: usize) -> bool {
+        self.entity_map.contains_key(&entity)
     }
 
-    pub fn get(&mut self, entity_id: usize) -> Option<&mut T> {
-        let index = self.entity_id_map.get(&entity_id).unwrap();
+    pub fn get(&mut self, entity: usize) -> Option<&mut T> {
+        let index = self.entity_map.get(&entity).unwrap();
         return self.components.get_mut(*index);
     }
 
@@ -153,7 +192,7 @@ impl<T> ComponentStore<T> {
 pub trait ComponentManager {
     fn as_any(&self) -> &dyn std::any::Any;
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
-    fn remove(&mut self, entity_id: usize);
+    fn remove(&mut self, entity: usize);
 }
 
 impl<T: 'static> ComponentManager for RefCell<ComponentStore<T>> {
@@ -165,7 +204,63 @@ impl<T: 'static> ComponentManager for RefCell<ComponentStore<T>> {
         self as &mut dyn std::any::Any
     }
 
-    fn remove(&mut self, entity_id: usize) {
-        self.get_mut().remove(entity_id);
+    fn remove(&mut self, entity: usize) {
+        self.get_mut().remove(entity);
+    }
+}
+
+pub trait System {
+    fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
+        chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
+        delta_time: f32,
+    );
+}
+
+pub trait SystemStoreTrait {
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
+        chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
+        delta_time: f32,
+    );
+}
+
+pub struct SystemStore<T> {
+    system: T,
+}
+
+impl<T: System> SystemStore<T> {
+    pub fn new(system: T) -> Self {
+        Self {
+            system,
+        }
+    }
+}
+
+impl<T: 'static + System> SystemStoreTrait for SystemStore<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
+        chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
+        delta_time: f32,
+    ) {
+        self.system.update(ecs, entity_cache, chunk, input, player, delta_time);
     }
 }
