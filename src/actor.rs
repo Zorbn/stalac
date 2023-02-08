@@ -1,4 +1,4 @@
-use crate::{chunk::Chunk, input::Input, entities::Entities};
+use crate::{chunk::Chunk, ecs::Ecs, input::Input};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
@@ -26,31 +26,39 @@ impl Actor {
         }
     }
 
-    pub fn update(self_id: u32, entities: &mut Entities, _input: &mut Input, chunk: &Chunk, delta_time: f32) {
-        let actor = entities.actor.get_mut(&self_id).unwrap();
+    pub fn update(
+        // self_id: u32,
+        ecs: &mut Ecs,
+        _input: &mut Input,
+        chunk: &Chunk,
+        delta_time: f32,
+    ) {
+        let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        actor.grounded = chunk
-            .get_block_collision(
-                actor.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
-                actor.size,
-            )
-            .is_some();
+        for actor in actors.get_all() {
+            actor.grounded = chunk
+                .get_block_collision(
+                    actor.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
+                    actor.size,
+                )
+                .is_some();
 
-        // If the player is moving towards the ground while touching it, snap to the floor
-        // and prevent y_velocity from building up over time.
-        if actor.grounded && actor.y_velocity < 0.0 {
-            actor.snap_to_floor()
-        }
+            // If the player is moving towards the ground while touching it, snap to the floor
+            // and prevent y_velocity from building up over time.
+            if actor.grounded && actor.y_velocity < 0.0 {
+                actor.snap_to_floor()
+            }
 
-        actor.apply_gravity(delta_time);
+            actor.apply_gravity(delta_time);
 
-        if !actor.step(
-            cgmath::Vector3::unit_y(),
-            actor.y_velocity() * delta_time,
-            chunk,
-            false,
-        ) {
-            actor.reset_y_velocity();
+            if !actor.step(
+                cgmath::Vector3::unit_y(),
+                actor.y_velocity() * delta_time,
+                chunk,
+                false,
+            ) {
+                actor.reset_y_velocity();
+            }
         }
     }
 

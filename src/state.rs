@@ -2,7 +2,7 @@ use crate::actor::Actor;
 use crate::camera::{Camera, CameraPerspectiveProjection};
 use crate::chase_ai::ChaseAi;
 use crate::chunk::Chunk;
-use crate::entities::Entities;
+use crate::ecs::Ecs;
 use crate::input::Input;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Model;
@@ -13,6 +13,7 @@ use crate::texture::{self, Texture};
 use crate::texture_array::TextureArray;
 use crate::vertex::Vertex;
 use cgmath::prelude::*;
+use std::borrow::BorrowMut;
 use std::iter::once;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
@@ -44,9 +45,10 @@ pub struct State {
     camera: Camera,
     model: Model,
     chunk: Chunk,
-    entities: Entities,
-    entity_key_cache: Vec<u32>,
-    player_id: u32,
+    ecs: Ecs,
+    // entity_key_cache: Vec<u32>,
+    player_id: usize,
+    entity_instances: Vec<Instance>, // TODO: This should be its own system
 }
 
 impl State {
@@ -93,7 +95,7 @@ impl State {
             format: surface_format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::AutoNoVsync,
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
         };
@@ -235,10 +237,16 @@ impl State {
             enemy_actor.teleport(enemy_spawn);
         }
 
-        let mut entities = Entities::new();
-        let entity_key_cache = Vec::new();
-        entities.insert(enemy_actor, Some(ChaseAi::new()), None);
-        let player_id = entities.insert(player_actor, None, Some(PlayerAi {}));
+        let mut ecs = Ecs::new();
+        // let entity_key_cache = Vec::new();
+        let player_id = ecs.add_entity(); // TODO: Maybe rename all entity_ids to be just entities?
+        ecs.add_component_to_entity(player_id, player_actor);
+        ecs.add_component_to_entity(player_id, PlayerAi {});
+        let enemy_id = ecs.add_entity();
+        ecs.add_component_to_entity(enemy_id, enemy_actor);
+        ecs.add_component_to_entity(enemy_id, ChaseAi::new());
+        // entities.insert(enemy_actor, Some(ChaseAi::new()), None);
+        // let player_id = entities.insert(player_actor, None, Some(PlayerAi {}));
 
         Self {
             window,
@@ -254,9 +262,10 @@ impl State {
             camera,
             model,
             chunk,
-            entities,
-            entity_key_cache,
+            ecs,
+            // entity_key_cache,
             player_id,
+            entity_instances: Vec::new(),
         }
     }
 
@@ -330,11 +339,24 @@ impl State {
             }
         }
 
-        self.entities.update(&mut self.entity_key_cache, &mut self.input, self.player_id, &self.chunk, delta_time);
+        Actor::update(&mut self.ecs, &mut self.input, &self.chunk, delta_time);
+        ChaseAi::update(
+            &mut self.input,
+            &mut self.ecs,
+            self.player_id,
+            &self.chunk,
+            delta_time,
+        );
+        PlayerAi::update(&mut self.input, &mut self.ecs, &self.chunk, delta_time);
 
-        if let Some(player) = self.entities.actor.get(&self.player_id) {
-            self.camera
-                .rotate(player.look_x(), player.look_y());
+        if let Some(player) = self
+            .ecs
+            .borrow_components::<Actor>()
+            .unwrap()
+            .borrow_mut()
+            .get(self.player_id)
+        {
+            self.camera.rotate(player.look_x(), player.look_y());
             self.camera.teleport(player.head_position());
         }
 
@@ -391,8 +413,37 @@ impl State {
                 render_pass.draw_indexed(0..model.num_indices(), 0, 0..model.num_instances());
             }
 
+            // TODO: Move this to a system
+
+            self.entity_instances.clear();
+
+            // let player_position = cgmath::Vector3::<f32>::zero();
+
+            let player_position = self
+                .ecs
+                .borrow_components::<Actor>()
+                .unwrap()
+                .borrow_mut()
+                .get(self.player_id)
+                .unwrap()
+                .position();
+            let mut actors = self.ecs.borrow_components::<Actor>().unwrap();
+
+            for actor in actors.get_all() {
+                let mut instance = Instance {
+                    position: actor.position(),
+                    rotation: cgmath::Quaternion::zero(),
+                };
+
+                instance.rotate_towards(&player_position);
+
+                self.entity_instances.push(instance);
+            }
+
+            // ENDTODO
+
             self.model
-                .update_instances(&self.device, self.entities.instances());
+                .update_instances(&self.device, &self.entity_instances);
             render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
             render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
