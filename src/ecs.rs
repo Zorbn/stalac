@@ -1,20 +1,18 @@
 use std::{
     cell::{RefCell, RefMut},
-    collections::HashMap, ops::Deref,
+    collections::HashMap,
 };
-
-use crate::entity_instances_system::EntityInstancesSystem;
 
 pub struct EntityManager {
     entities_count: usize,
-    component_managers: Vec<Box<dyn ComponentManager>>,
+    component_stores: Vec<Box<dyn AnyComponentStore>>,
 }
 
 impl EntityManager {
     pub fn new() -> Self {
         Self {
             entities_count: 0,
-            component_managers: Vec::new(),
+            component_stores: Vec::new(),
         }
     }
 
@@ -25,13 +23,13 @@ impl EntityManager {
     }
 
     pub fn remove_entity<T: 'static>(&mut self, entity: usize) {
-        for component_store in self.component_managers.iter_mut() {
+        for component_store in self.component_stores.iter_mut() {
             component_store.remove(entity);
         }
     }
 
     pub fn add_component_to_entity<T: 'static>(&mut self, entity: usize, component: T) {
-        for component_store in self.component_managers.iter_mut() {
+        for component_store in self.component_stores.iter_mut() {
             if let Some(component_store) = component_store
                 .as_any_mut()
                 .downcast_mut::<RefCell<ComponentStore<T>>>()
@@ -44,12 +42,12 @@ impl EntityManager {
         // There wasn't an existing place to store this component, create one.
         let mut new_component_store = ComponentStore::<T>::new();
         new_component_store.add(entity, component);
-        self.component_managers
+        self.component_stores
             .push(Box::new(RefCell::new(new_component_store)));
     }
 
     pub fn remove_component_from_entity<T: 'static>(&mut self, entity: usize) {
-        for component_store in self.component_managers.iter_mut() {
+        for component_store in self.component_stores.iter_mut() {
             if let Some(component_store) = component_store
                 .as_any_mut()
                 .downcast_mut::<RefCell<ComponentStore<T>>>()
@@ -61,7 +59,7 @@ impl EntityManager {
     }
 
     pub fn borrow_components<T: 'static>(&self) -> Option<RefMut<ComponentStore<T>>> {
-        for component_store in self.component_managers.iter() {
+        for component_store in self.component_stores.iter() {
             if let Some(component_store) = component_store
                 .as_any()
                 .downcast_ref::<RefCell<ComponentStore<T>>>()
@@ -91,48 +89,6 @@ impl EntityManager {
                 entities.push(*entity);
             }
         }
-    }
-}
-
-pub struct SystemManager {
-    systems: Vec<Box<dyn SystemStoreTrait>>,
-}
-
-impl SystemManager {
-    pub fn new() -> Self {
-        Self {
-            systems: Vec::new(),
-        }
-    }
-
-    pub fn update(
-        &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
-        player: usize,
-        delta_time: f32,
-    ) {
-        for system in &mut self.systems {
-            system.update(ecs, entity_cache, chunk, input, player, delta_time);
-        }
-    }
-
-    pub fn add_system<T: 'static + System>(&mut self, system: T) {
-        self.systems.push(Box::new(SystemStore::new(system)));
-    }
-
-    pub fn get<T: 'static>(&mut self) -> Option<&T> {
-        for system in self.systems.iter() {
-            if let Some(system) = system.as_any()
-                .downcast_ref::<SystemStore<T>>()
-            {
-                return Some(&system.system); // TODO: Fix all the stupid naming for system stuff (system.system names of system traits and structs).
-            }
-        }
-
-        None
     }
 }
 
@@ -189,13 +145,13 @@ impl<T> ComponentStore<T> {
     }
 }
 
-pub trait ComponentManager {
+pub trait AnyComponentStore {
     fn as_any(&self) -> &dyn std::any::Any;
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
     fn remove(&mut self, entity: usize);
 }
 
-impl<T: 'static> ComponentManager for RefCell<ComponentStore<T>> {
+impl<T: 'static> AnyComponentStore for RefCell<ComponentStore<T>> {
     fn as_any(&self) -> &dyn std::any::Any {
         self as &dyn std::any::Any
     }
@@ -206,6 +162,46 @@ impl<T: 'static> ComponentManager for RefCell<ComponentStore<T>> {
 
     fn remove(&mut self, entity: usize) {
         self.get_mut().remove(entity);
+    }
+}
+
+pub struct SystemManager {
+    system_stores: Vec<Box<dyn AnySystemStore>>,
+}
+
+impl SystemManager {
+    pub fn new() -> Self {
+        Self {
+            system_stores: Vec::new(),
+        }
+    }
+
+    pub fn update(
+        &mut self,
+        ecs: &mut EntityManager,
+        entity_cache: &mut Vec<usize>,
+        chunk: &crate::chunk::Chunk,
+        input: &mut crate::input::Input,
+        player: usize,
+        delta_time: f32,
+    ) {
+        for system_store in &mut self.system_stores {
+            system_store.update(ecs, entity_cache, chunk, input, player, delta_time);
+        }
+    }
+
+    pub fn add_system<T: 'static + System>(&mut self, system: T) {
+        self.system_stores.push(Box::new(SystemStore::new(system)));
+    }
+
+    pub fn get<T: 'static>(&mut self) -> Option<&T> {
+        for system_store in self.system_stores.iter() {
+            if let Some(system_store) = system_store.as_any().downcast_ref::<SystemStore<T>>() {
+                return Some(&system_store.system);
+            }
+        }
+
+        None
     }
 }
 
@@ -221,7 +217,7 @@ pub trait System {
     );
 }
 
-pub trait SystemStoreTrait {
+pub trait AnySystemStore {
     fn as_any(&self) -> &dyn std::any::Any;
 
     fn update(
@@ -241,13 +237,11 @@ pub struct SystemStore<T> {
 
 impl<T: System> SystemStore<T> {
     pub fn new(system: T) -> Self {
-        Self {
-            system,
-        }
+        Self { system }
     }
 }
 
-impl<T: 'static + System> SystemStoreTrait for SystemStore<T> {
+impl<T: 'static + System> AnySystemStore for SystemStore<T> {
     fn as_any(&self) -> &dyn std::any::Any {
         self as &dyn std::any::Any
     }
@@ -261,6 +255,7 @@ impl<T: 'static + System> SystemStoreTrait for SystemStore<T> {
         player: usize,
         delta_time: f32,
     ) {
-        self.system.update(ecs, entity_cache, chunk, input, player, delta_time);
+        self.system
+            .update(ecs, entity_cache, chunk, input, player, delta_time);
     }
 }
