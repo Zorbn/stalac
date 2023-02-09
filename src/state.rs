@@ -1,11 +1,12 @@
 use crate::chunk::Chunk;
 use crate::ecs::actor::{Actor, ActorSystem};
 use crate::ecs::chase_ai::{ChaseAi, ChaseAiSystem};
+use crate::ecs::display::Display;
 use crate::ecs::ecs::{EntityManager, SystemManager};
 use crate::ecs::entity_instances_system::EntityInstancesSystem;
 use crate::ecs::player::{Player, PlayerMovementSystem};
 use crate::gfx::camera::{Camera, CameraPerspectiveProjection};
-use crate::gfx::instance::{InstanceRaw, Instance};
+use crate::gfx::instance::InstanceRaw;
 use crate::gfx::model::Model;
 use crate::gfx::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
 use crate::gfx::texture::{Texture, self};
@@ -177,34 +178,7 @@ impl State {
             multiview: None,
         });
 
-        let mut model = Model::new(&device, SPRITE_VERTICES, SPRITE_INDICES);
-        let instances = vec![
-            Instance {
-                position: cgmath::Vector3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                rotation: cgmath::Quaternion::zero(),
-            },
-            Instance {
-                position: cgmath::Vector3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: -1.0,
-                },
-                rotation: cgmath::Quaternion::zero(),
-            },
-            Instance {
-                position: cgmath::Vector3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: 10.0,
-                },
-                rotation: cgmath::Quaternion::zero(),
-            },
-        ];
-        model.update_instances(&device, &instances);
+        let model = Model::new(&device, SPRITE_VERTICES, SPRITE_INDICES);
 
         let input = Input::new();
 
@@ -245,6 +219,7 @@ impl State {
         let enemy = ecs.add_entity();
         ecs.add_component_to_entity(enemy, enemy_actor);
         ecs.add_component_to_entity(enemy, ChaseAi::new());
+        ecs.add_component_to_entity(enemy, Display::new(1));
 
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});

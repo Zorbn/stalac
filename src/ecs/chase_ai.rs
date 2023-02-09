@@ -53,6 +53,11 @@ impl System for ChaseAiSystem {
             .position();
 
         ecs.get_entities_with::<ChaseAi, Actor>(entity_cache);
+
+        if entity_cache.len() == 0 {
+            return;
+        }
+
         let mut ais = ecs.borrow_components::<ChaseAi>().unwrap();
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 

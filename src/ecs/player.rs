@@ -27,6 +27,11 @@ impl System for PlayerMovementSystem {
         delta_time: f32,
     ) {
         ecs.get_entities_with::<Player, Actor>(entity_cache);
+
+        if entity_cache.len() == 0 {
+            return;
+        }
+
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
         for id in entity_cache {

@@ -114,6 +114,7 @@ impl Chunk {
                         z: 0.0,
                     },
                     rotation: cgmath::Quaternion::zero(),
+                    tex_index: 0,
                 }],
             );
         }

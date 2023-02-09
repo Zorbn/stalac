@@ -203,6 +203,15 @@ impl SystemManager {
 
         None
     }
+
+    pub fn remove<T: 'static>(&mut self) {
+        for (i, system_store) in self.system_stores.iter().enumerate() {
+            if let Some(_) = system_store.as_any().downcast_ref::<SystemStore<T>>() {
+                self.system_stores.remove(i);
+                return;
+            }
+        }
+    }
 }
 
 pub trait System {

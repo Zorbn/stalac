@@ -3,6 +3,7 @@ struct InstanceInput {
     @location(4) model_matrix_1: vec4<f32>,
     @location(5) model_matrix_2: vec4<f32>,
     @location(6) model_matrix_3: vec4<f32>,
+    @location(7) tex_index: u32,
 };
 
 struct CameraUniform {
@@ -40,7 +41,7 @@ fn vs_main(
 
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.tex_index = model.tex_index;
+    out.tex_index = instance.tex_index + model.tex_index;
     out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
     out.light_level = distance(out.clip_position.xyz, light_pos);
     return out;

@@ -5,7 +5,7 @@ use cgmath::prelude::*;
 
 use super::{
     actor::Actor,
-    ecs::{EntityManager, System},
+    ecs::{EntityManager, System}, display::Display,
 };
 
 pub struct EntityInstancesSystem {
@@ -28,7 +28,7 @@ impl System for EntityInstancesSystem {
     fn update(
         &mut self,
         ecs: &mut EntityManager,
-        _entity_cache: &mut Vec<usize>,
+        entity_cache: &mut Vec<usize>,
         _chunk: &Chunk,
         _input: &mut Input,
         player: usize,
@@ -43,12 +43,24 @@ impl System for EntityInstancesSystem {
             .get(player)
             .unwrap()
             .position();
+
+        ecs.get_entities_with::<Display, Actor>(entity_cache);
+
+        if entity_cache.len() == 0 {
+            return;
+        }
+
+        let mut displays = ecs.borrow_components::<Display>().unwrap();
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for actor in actors.get_all() {
+        for id in entity_cache {
+            let display = displays.borrow_mut().get(*id).unwrap();
+            let actor = actors.borrow_mut().get(*id).unwrap();
+
             let mut instance = Instance {
                 position: actor.position(),
                 rotation: cgmath::Quaternion::zero(),
+                tex_index: display.tex_index(),
             };
 
             instance.rotate_towards(&player_position);
