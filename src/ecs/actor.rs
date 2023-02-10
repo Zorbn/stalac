@@ -1,6 +1,6 @@
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, collections::HashSet};
 
-use crate::{chunk::Chunk, input::Input};
+use crate::{chunk::{Chunk, BLOCK_SIZE}, input::Input};
 
 use super::ecs::{EntityManager, System};
 
@@ -15,6 +15,7 @@ pub struct Actor {
     look_y: f32,
     y_velocity: f32,
     grounded: bool,
+    nearby_entities: HashSet<usize>,
 }
 
 impl Actor {
@@ -27,6 +28,7 @@ impl Actor {
             look_y: 0.0,
             y_velocity: 0.0,
             grounded: false,
+            nearby_entities: HashSet::new(),
         }
     }
 
@@ -57,14 +59,31 @@ impl Actor {
             let x_offset = (i % 2) * 2 - 1;
             let z_offset = (i / 2) * 2 - 1;
 
-            let old_block_position = self.get_corner_pos(old_position, x_offset, z_offset);
-            let new_block_position = self.get_corner_pos(self.position, x_offset, z_offset);
+            let old_block_position = self.get_corner_pos(old_position, x_offset, z_offset) / BLOCK_SIZE;
+            let new_block_position = self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
 
             chunk.remove_entity_from_block(entity, old_block_position.x, old_block_position.z);
             chunk.add_entity_to_block(entity, new_block_position.x, new_block_position.z);
         }
 
         true
+    }
+
+    pub fn get_nearby_entities(&mut self, chunk: &mut Chunk) -> &HashSet<usize> {
+        self.nearby_entities.clear();
+
+        for i in 0..4 {
+            let x_offset = (i % 2) * 2 - 1;
+            let z_offset = (i / 2) * 2 - 1;
+
+            let corner_position = self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
+
+            if let Some(entities_at_block) = chunk.entities_at_block(corner_position.x, corner_position.z) {
+                self.nearby_entities.extend(entities_at_block);
+            }
+        }
+
+        &self.nearby_entities
     }
 
     pub fn rotate(&mut self, delta_x: f32, delta_y: f32) {

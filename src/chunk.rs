@@ -251,4 +251,17 @@ impl Chunk {
 
         self.entities_on_blocks[ux + uz * CHUNK_SIZE].remove(&entity);
     }
+
+    pub fn entities_at_block(&self, x: i32, z: i32) -> Option<std::collections::hash_set::Iter<'_, usize>> {
+        let i_chunk_size = CHUNK_SIZE as i32;
+        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size
+        {
+            return None;
+        }
+
+        let ux = x as usize;
+        let uz = z as usize;
+
+        Some(self.entities_on_blocks[ux + uz * CHUNK_SIZE].iter())
+    }
 }
