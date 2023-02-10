@@ -228,8 +228,7 @@ impl Chunk {
 
     pub fn add_entity_to_block(&mut self, entity: usize, x: i32, z: i32) {
         let i_chunk_size = CHUNK_SIZE as i32;
-        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size
-        {
+        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size {
             return;
         }
 
@@ -241,8 +240,7 @@ impl Chunk {
 
     pub fn remove_entity_from_block(&mut self, entity: usize, x: i32, z: i32) {
         let i_chunk_size = CHUNK_SIZE as i32;
-        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size
-        {
+        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size {
             return;
         }
 
@@ -252,10 +250,13 @@ impl Chunk {
         self.entities_on_blocks[ux + uz * CHUNK_SIZE].remove(&entity);
     }
 
-    pub fn entities_at_block(&self, x: i32, z: i32) -> Option<std::collections::hash_set::Iter<'_, usize>> {
+    pub fn entities_at_block(
+        &self,
+        x: i32,
+        z: i32,
+    ) -> Option<std::collections::hash_set::Iter<'_, usize>> {
         let i_chunk_size = CHUNK_SIZE as i32;
-        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size
-        {
+        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size {
             return None;
         }
 

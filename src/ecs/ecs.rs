@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
 };
 
-use crate::{input::Input, chunk::Chunk};
+use crate::{chunk::Chunk, input::Input};
 
 pub struct EntityManager {
     entities_count: usize,

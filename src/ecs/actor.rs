@@ -1,11 +1,15 @@
 use std::{borrow::BorrowMut, collections::HashSet};
 
-use crate::{chunk::{Chunk, BLOCK_SIZE}, input::Input};
+use crate::{
+    chunk::{Chunk, BLOCK_SIZE},
+    input::Input,
+};
 
 use super::ecs::{EntityManager, System};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
+const GROUNDED_DISTANCE: f32 = 0.1;
 
 pub struct Actor {
     speed: f32,
@@ -59,8 +63,10 @@ impl Actor {
             let x_offset = (i % 2) * 2 - 1;
             let z_offset = (i / 2) * 2 - 1;
 
-            let old_block_position = self.get_corner_pos(old_position, x_offset, z_offset) / BLOCK_SIZE;
-            let new_block_position = self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
+            let old_block_position =
+                self.get_corner_pos(old_position, x_offset, z_offset) / BLOCK_SIZE;
+            let new_block_position =
+                self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
 
             chunk.remove_entity_from_block(entity, old_block_position.x, old_block_position.z);
             chunk.add_entity_to_block(entity, new_block_position.x, new_block_position.z);
@@ -76,9 +82,12 @@ impl Actor {
             let x_offset = (i % 2) * 2 - 1;
             let z_offset = (i / 2) * 2 - 1;
 
-            let corner_position = self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
+            let corner_position =
+                self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
 
-            if let Some(entities_at_block) = chunk.entities_at_block(corner_position.x, corner_position.z) {
+            if let Some(entities_at_block) =
+                chunk.entities_at_block(corner_position.x, corner_position.z)
+            {
                 self.nearby_entities.extend(entities_at_block);
             }
         }
@@ -98,7 +107,7 @@ impl Actor {
 
     fn snap_to_floor(&mut self) {
         self.reset_y_velocity();
-        self.position.y = self.position.y.floor() + self.size.y * 0.5;
+        self.position.y = self.position.y.floor() + self.size.y * 0.5 + GROUNDED_DISTANCE;
     }
 
     fn reset_y_velocity(&mut self) {
@@ -109,8 +118,20 @@ impl Actor {
         self.y_velocity -= GRAVITY * delta_time;
     }
 
-    fn get_corner_pos(&self, position: cgmath::Vector3<f32>, x_offset: i32, z_offset: i32) -> cgmath::Vector3<i32> {
-        (position + cgmath::Vector3::new(self.size.x * x_offset as f32, 0.0, self.size.z * z_offset as f32)).cast::<i32>().unwrap()
+    fn get_corner_pos(
+        &self,
+        position: cgmath::Vector3<f32>,
+        x_offset: i32,
+        z_offset: i32,
+    ) -> cgmath::Vector3<i32> {
+        (position
+            + cgmath::Vector3::new(
+                self.size.x * x_offset as f32,
+                0.0,
+                self.size.z * z_offset as f32,
+            ))
+        .cast::<i32>()
+        .unwrap()
     }
 
     pub fn jump(&mut self) {
@@ -171,7 +192,7 @@ impl System for ActorSystem {
 
             actor.grounded = chunk
                 .get_block_collision(
-                    actor.position - cgmath::Vector3::new(0.0, 0.01, 0.0),
+                    actor.position - cgmath::Vector3::new(0.0, GROUNDED_DISTANCE, 0.0),
                     actor.size,
                 )
                 .is_some();
