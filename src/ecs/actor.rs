@@ -19,7 +19,6 @@ pub struct Actor {
     look_y: f32,
     y_velocity: f32,
     grounded: bool,
-    nearby_entities: HashSet<usize>,
 }
 
 impl Actor {
@@ -32,7 +31,6 @@ impl Actor {
             look_y: 0.0,
             y_velocity: 0.0,
             grounded: false,
-            nearby_entities: HashSet::new(),
         }
     }
 
@@ -75,8 +73,8 @@ impl Actor {
         true
     }
 
-    pub fn update_nearby_entities(&mut self, chunk: &mut Chunk) {
-        self.nearby_entities.clear();
+    pub fn get_nearby_entities(&mut self, chunk: &mut Chunk, nearby_entities: &mut HashSet<usize>) {
+        nearby_entities.clear();
 
         for i in 0..4 {
             let x_offset = (i % 2) * 2 - 1;
@@ -88,13 +86,9 @@ impl Actor {
             if let Some(entities_at_block) =
                 chunk.entities_at_block(corner_position.x, corner_position.z)
             {
-                self.nearby_entities.extend(entities_at_block);
+                nearby_entities.extend(entities_at_block);
             }
         }
-    }
-
-    pub fn nearby_entities(&self) -> &HashSet<usize> {
-        &self.nearby_entities
     }
 
     pub fn rotate(&mut self, delta_x: f32, delta_y: f32) {

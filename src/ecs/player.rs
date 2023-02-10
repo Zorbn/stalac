@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, BorrowMut};
+use std::{borrow::BorrowMut, collections::HashSet};
 
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
@@ -7,14 +7,22 @@ use crate::{chunk::Chunk, gfx::camera::Camera, input::Input};
 
 use super::{
     actor::Actor,
-    ecs::{EntityManager, System},
+    ecs::{EntityManager, System}, fighter::Fighter,
 };
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
 
 pub struct Player {}
 
-pub struct PlayerMovementSystem {}
+pub struct PlayerMovementSystem {
+    nearby_entities: HashSet<usize>,
+}
+
+impl PlayerMovementSystem {
+    pub fn new() -> Self {
+        Self { nearby_entities: HashSet::new() }
+    }
+}
 
 impl System for PlayerMovementSystem {
     fn update(
@@ -33,6 +41,7 @@ impl System for PlayerMovementSystem {
         }
 
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
+        let mut fighters = ecs.borrow_components::<Fighter>();
 
         for entity in entity_cache {
             let actor = actors.borrow_mut().get_mut(*entity).unwrap();
@@ -90,25 +99,37 @@ impl System for PlayerMovementSystem {
                 -input.mouse_delta_x() * MOUSE_SENSITIVITY,
             );
 
-            actor.update_nearby_entities(chunk);
+            actor.get_nearby_entities(chunk, &mut self.nearby_entities);
 
-            // TODO: Create an attack component which has a get_next_attack_damage function, that returns
-            // for example, 0 if the attack hasn't charged, and 10 if it has, add all get_next_attack_damage's
-            // to a counter, then outside the loop drop the immutable borrow to the player, get a new mutable one,
-            // and apply all of the damage at once.
-            // drop(actor);
+            let position = actor.position();
+            let size = actor.size();
 
-            // let actor = actors.borrow().get(*entity).unwrap();
+            drop(actor);
 
-            // for nearby_entity in actor.nearby_entities() {
-            //     if nearby_entity != entity {
-            //         let other_actor = actors.borrow().get(*nearby_entity).unwrap();
-            //         println!(
-            //             "{}",
-            //             actor.intersects(other_actor.position(), other_actor.size())
-            //         );
-            //     }
-            // }
+            // TODO: Fighters should have their own system to attack the player with.
+            let fighters = match &mut fighters {
+                Some(f) => f,
+                None => continue,
+            };
+
+            let mut damage_accumulator = 0;
+
+            for nearby_entity in &self.nearby_entities {
+                if nearby_entity == entity {
+                    continue;
+                }
+
+                let nearby_actor = actors.borrow_mut().get_mut(*nearby_entity).unwrap();
+                if !nearby_actor.intersects(position, size) {
+                    continue;
+                }
+
+                if let Some(fighter) = fighters.borrow_mut().get_mut(*nearby_entity) {
+                    damage_accumulator += fighter.get_attack();
+                }
+            }
+
+            println!("{}", damage_accumulator);
         }
     }
 }
