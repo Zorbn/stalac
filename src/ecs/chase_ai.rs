@@ -62,8 +62,8 @@ impl System for ChaseAiSystem {
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {
-            let ai = ais.borrow_mut().get(*entity).unwrap();
-            let actor = actors.borrow_mut().get(*entity).unwrap();
+            let ai = ais.borrow_mut().get_mut(*entity).unwrap();
+            let actor = actors.borrow_mut().get_mut(*entity).unwrap();
 
             ai.repath_timer += delta_time;
 

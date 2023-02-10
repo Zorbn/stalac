@@ -1,4 +1,4 @@
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
 
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
@@ -35,7 +35,7 @@ impl System for PlayerMovementSystem {
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {
-            let actor = actors.borrow_mut().get(*entity).unwrap();
+            let actor = actors.borrow_mut().get_mut(*entity).unwrap();
 
             let mut dir_z = 0.0;
             let mut dir_x = 0.0;
@@ -89,6 +89,26 @@ impl System for PlayerMovementSystem {
                 input.mouse_delta_y() * MOUSE_SENSITIVITY,
                 -input.mouse_delta_x() * MOUSE_SENSITIVITY,
             );
+
+            actor.update_nearby_entities(chunk);
+
+            // TODO: Create an attack component which has a get_next_attack_damage function, that returns
+            // for example, 0 if the attack hasn't charged, and 10 if it has, add all get_next_attack_damage's
+            // to a counter, then outside the loop drop the immutable borrow to the player, get a new mutable one,
+            // and apply all of the damage at once.
+            // drop(actor);
+
+            // let actor = actors.borrow().get(*entity).unwrap();
+
+            // for nearby_entity in actor.nearby_entities() {
+            //     if nearby_entity != entity {
+            //         let other_actor = actors.borrow().get(*nearby_entity).unwrap();
+            //         println!(
+            //             "{}",
+            //             actor.intersects(other_actor.position(), other_actor.size())
+            //         );
+            //     }
+            // }
         }
     }
 }

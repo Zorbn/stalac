@@ -75,7 +75,7 @@ impl Actor {
         true
     }
 
-    pub fn get_nearby_entities(&mut self, chunk: &mut Chunk) -> &HashSet<usize> {
+    pub fn update_nearby_entities(&mut self, chunk: &mut Chunk) {
         self.nearby_entities.clear();
 
         for i in 0..4 {
@@ -91,7 +91,9 @@ impl Actor {
                 self.nearby_entities.extend(entities_at_block);
             }
         }
+    }
 
+    pub fn nearby_entities(&self) -> &HashSet<usize> {
         &self.nearby_entities
     }
 
@@ -132,6 +134,20 @@ impl Actor {
             ))
         .cast::<i32>()
         .unwrap()
+    }
+
+    pub fn intersects(&self, position: cgmath::Vector3<f32>, size: cgmath::Vector3<f32>) -> bool {
+        let min = self.position - self.size * 0.5;
+        let max = self.position + self.size * 0.5;
+        let other_min = position - size * 0.5;
+        let other_max = position + size * 0.5;
+
+        min.x <= other_max.x
+            && max.x >= other_min.x
+            && min.y <= other_max.y
+            && max.y >= other_min.y
+            && min.z <= other_max.z
+            && max.z >= other_min.z
     }
 
     pub fn jump(&mut self) {
@@ -188,7 +204,7 @@ impl System for ActorSystem {
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {
-            let actor = actors.borrow_mut().get(*entity).unwrap();
+            let actor = actors.borrow_mut().get_mut(*entity).unwrap();
 
             actor.grounded = chunk
                 .get_block_collision(

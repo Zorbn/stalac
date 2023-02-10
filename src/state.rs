@@ -24,19 +24,10 @@ use winit::dpi::PhysicalSize;
 use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 use winit::window::{Fullscreen, Window};
 
-/*
- * TODO:
- * Orthographic camera/ ui
- * For collisions, consider building a grid of buckets that entities can be placed in:
- * Entities are stored in a hashmap with an id,
- * As entities move, they are placed into buckets based on their approximate position and removed from the one they used to be in if necessary,
- * To find what entities to check against for collisions an entity can get all the entity ids in the 3x3 of buckets surrounding them, and find
- * the entities they need based on their ids.
- */
-
 const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 100.0;
 const UI_SCALE: f32 = 28.0;
+const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::Vector3::new(1.0, 0.8, 1.0);
 
 pub struct State {
     window: Window,
@@ -274,7 +265,7 @@ impl State {
 
         let mut player_actor = Actor::new(
             cgmath::Vector3::zero(),
-            cgmath::Vector3::new(0.5, 0.8, 0.5),
+            HUMANOID_SIZE,
             6.0,
         );
 
@@ -284,7 +275,7 @@ impl State {
 
         let mut enemy_actor = Actor::new(
             cgmath::Vector3::zero(),
-            cgmath::Vector3::new(0.5, 0.8, 0.5),
+            HUMANOID_SIZE,
             6.0,
         );
 

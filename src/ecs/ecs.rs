@@ -147,12 +147,21 @@ impl<T> ComponentStore<T> {
         self.entity_map.contains_key(&entity)
     }
 
-    pub fn get(&mut self, entity: usize) -> Option<&mut T> {
+    pub fn get(&self, entity: usize) -> Option<&T> {
+        let index = self.entity_map.get(&entity).unwrap();
+        return self.components.get(*index);
+    }
+
+    pub fn get_all(&self) -> &Vec<T> {
+        &self.components
+    }
+
+    pub fn get_mut(&mut self, entity: usize) -> Option<&mut T> {
         let index = self.entity_map.get(&entity).unwrap();
         return self.components.get_mut(*index);
     }
 
-    pub fn get_all(&mut self) -> &mut Vec<T> {
+    pub fn get_all_mut(&mut self) -> &mut Vec<T> {
         &mut self.components
     }
 
