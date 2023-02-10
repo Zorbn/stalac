@@ -1,11 +1,12 @@
 use std::borrow::BorrowMut;
 
-use crate::{chunk::Chunk, input::Input, gfx::instance::Instance};
+use crate::{chunk::Chunk, gfx::instance::Instance, input::Input};
 use cgmath::prelude::*;
 
 use super::{
     actor::Actor,
-    ecs::{EntityManager, System}, display::Display,
+    display::Display,
+    ecs::{EntityManager, System},
 };
 
 pub struct EntityInstancesSystem {

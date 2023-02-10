@@ -1,9 +1,9 @@
 use std::borrow::BorrowMut;
 
-use winit::event::VirtualKeyCode;
 use cgmath::prelude::*;
+use winit::event::VirtualKeyCode;
 
-use crate::{chunk::Chunk, input::Input, gfx::camera::Camera};
+use crate::{chunk::Chunk, gfx::camera::Camera, input::Input};
 
 use super::{
     actor::Actor,

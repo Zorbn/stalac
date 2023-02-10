@@ -3,10 +3,10 @@ mod bytes;
 mod chunk;
 mod direction;
 mod ecs;
+mod gfx;
 mod input;
 mod rng;
 mod state;
-mod gfx;
 
 use std::time::Instant;
 
@@ -51,7 +51,7 @@ pub async fn run() {
         Event::RedrawRequested(window_id) if window_id == state.window().id() => {
             let current_time = Instant::now();
             let delta_time = (current_time - last_frame_time).as_secs_f32();
-            println!("{}", 1.0 / delta_time);
+            // println!("{}", 1.0 / delta_time);
             last_frame_time = current_time;
 
             state.update(delta_time);

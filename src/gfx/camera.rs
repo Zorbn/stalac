@@ -12,17 +12,15 @@ const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 );
 
 pub struct Camera {
-    projection: CameraPerspectiveProjection,
+    projection: Box<dyn CameraProjection>,
     uniform: CameraUniform,
     buffer: wgpu::Buffer,
     bind_group_layout: wgpu::BindGroupLayout,
     bind_group: wgpu::BindGroup,
-    look_x: f32,
-    look_y: f32,
 }
 
 impl Camera {
-    pub fn new(device: &wgpu::Device, projection: CameraPerspectiveProjection) -> Self {
+    pub fn new(device: &wgpu::Device, projection: Box<dyn CameraProjection>) -> Self {
         let mut uniform = CameraUniform::new();
         uniform.update_view_proj(&projection);
 
@@ -61,13 +59,11 @@ impl Camera {
             buffer,
             bind_group_layout,
             bind_group,
-            look_x: 0.0,
-            look_y: 0.0,
         }
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
-        self.projection.aspect = CameraPerspectiveProjection::get_aspect(width, height);
+        self.projection.resize(width, height);
     }
 
     pub fn update(&mut self, queue: &wgpu::Queue) {
@@ -84,21 +80,15 @@ impl Camera {
     }
 
     pub fn rotate(&mut self, look_x: f32, look_y: f32) {
-        self.look_x = look_x;
-        self.look_y = look_y;
-
-        let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.look_y));
-        let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(self.look_x));
-        let rot = y_rot * x_rot;
-        self.projection.look = rot * cgmath::Vector3::unit_z();
+        self.projection.rotate(look_x, look_y);
     }
 
     pub fn position(&self) -> cgmath::Vector3<f32> {
-        self.projection.eye
+        self.projection.position()
     }
 
     pub fn teleport(&mut self, position: cgmath::Vector3<f32>) {
-        self.projection.eye = position;
+        self.projection.teleport(position);
     }
 
     pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
@@ -110,14 +100,28 @@ impl Camera {
     }
 }
 
+pub trait CameraProjection {
+    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32>;
+    fn resize(&mut self, width: u32, height: u32);
+    fn rotate(&mut self, look_x: f32, look_y: f32);
+    fn position(&self) -> cgmath::Vector3<f32>;
+    fn teleport(&mut self, position: cgmath::Vector3<f32>);
+}
+
+fn get_aspect(width: u32, height: u32) -> f32 {
+    width as f32 / height as f32
+}
+
 pub struct CameraPerspectiveProjection {
-    pub eye: cgmath::Vector3<f32>,
-    pub look: cgmath::Vector3<f32>,
-    pub up: cgmath::Vector3<f32>,
-    pub aspect: f32,
-    pub fov_y: f32,
-    pub z_near: f32,
-    pub z_far: f32,
+    eye: cgmath::Vector3<f32>,
+    look: cgmath::Vector3<f32>,
+    up: cgmath::Vector3<f32>,
+    aspect: f32,
+    fov_y: f32,
+    z_near: f32,
+    z_far: f32,
+    look_x: f32,
+    look_y: f32,
 }
 
 impl CameraPerspectiveProjection {
@@ -133,14 +137,18 @@ impl CameraPerspectiveProjection {
             eye: position,
             look: cgmath::Vector3::unit_z(),
             up: cgmath::Vector3::unit_y(),
-            aspect: Self::get_aspect(width, height),
+            aspect: get_aspect(width, height),
             fov_y,
             z_near,
             z_far,
+            look_x: 0.0,
+            look_y: 0.0,
         }
     }
+}
 
-    pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+impl CameraProjection for CameraPerspectiveProjection {
+    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let eye_point = cgmath::Point3::new(self.eye.x, self.eye.y, self.eye.z);
         let target_point = cgmath::Point3::new(
             self.eye.x + self.look.x,
@@ -155,12 +163,80 @@ impl CameraPerspectiveProjection {
             self.z_far,
         );
 
-        return OPENGL_TO_WGPU_MATRIX * proj * view;
+        proj * view
     }
 
-    pub fn get_aspect(width: u32, height: u32) -> f32 {
-        width as f32 / height as f32
+    fn resize(&mut self, width: u32, height: u32) {
+        self.aspect = get_aspect(width, height);
     }
+
+    fn rotate(&mut self, look_x: f32, look_y: f32) {
+        self.look_x = look_x;
+        self.look_y = look_y;
+
+        let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.look_y));
+        let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(self.look_x));
+        let rot = y_rot * x_rot;
+        self.look = rot * cgmath::Vector3::unit_z();
+    }
+
+    fn position(&self) -> cgmath::Vector3<f32> {
+        self.eye
+    }
+
+    fn teleport(&mut self, position: cgmath::Vector3<f32>) {
+        self.eye = position;
+    }
+}
+
+pub struct CameraOrthographicProjection {
+    z_near: f32,
+    z_far: f32,
+    width: u32,
+    height: u32,
+    scale: f32,
+}
+
+impl CameraOrthographicProjection {
+    pub fn new(z_near: f32, z_far: f32, width: u32, height: u32, scale: f32) -> Self {
+        Self {
+            z_near,
+            z_far,
+            width,
+            height,
+            scale,
+        }
+    }
+}
+
+impl CameraProjection for CameraOrthographicProjection {
+    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+        let eye_point = cgmath::Point3::new(0.0, 0.0, 1.0);
+        let target_point = cgmath::Point3::new(0.0, 0.0, 0.0);
+        let view = cgmath::Matrix4::look_at_rh(eye_point, target_point, cgmath::Vector3::unit_y());
+
+        cgmath::ortho(
+            0.0,
+            self.width as f32 / self.scale,
+            0.0,
+            self.height as f32 / self.scale,
+            self.z_near,
+            self.z_far,
+        ) * view
+    }
+
+    fn resize(&mut self, width: u32, height: u32) {
+        self.width = width;
+        self.height = height;
+    }
+
+    fn rotate(&mut self, _look_x: f32, _look_y: f32) {}
+
+    fn position(&self) -> cgmath::Vector3<f32> {
+        cgmath::Vector3::zero()
+    }
+
+    fn teleport(&mut self, _position: cgmath::Vector3<f32>) {}
 }
 
 #[repr(C)]
@@ -176,7 +252,7 @@ impl CameraUniform {
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &CameraPerspectiveProjection) {
-        self.view_proj = camera.build_view_projection_matrix().into();
+    pub fn update_view_proj(&mut self, camera: &Box<dyn CameraProjection>) {
+        self.view_proj = (OPENGL_TO_WGPU_MATRIX * camera.build_view_projection_matrix()).into();
     }
 }

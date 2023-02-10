@@ -1,5 +1,5 @@
 use crate::direction::{dir_to_offset, index_to_dir};
-use crate::gfx::cube_mesh::{CUBE_VERTICES, CUBE_INDICES};
+use crate::gfx::cube_mesh::{CUBE_INDICES, CUBE_VERTICES};
 use crate::gfx::instance::Instance;
 use crate::gfx::model::Model;
 use crate::gfx::vertex::Vertex;

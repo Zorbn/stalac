@@ -5,11 +5,12 @@ use crate::ecs::display::Display;
 use crate::ecs::ecs::{EntityManager, SystemManager};
 use crate::ecs::entity_instances_system::EntityInstancesSystem;
 use crate::ecs::player::{Player, PlayerMovementSystem};
-use crate::gfx::camera::{Camera, CameraPerspectiveProjection};
+use crate::gfx::camera::{Camera, CameraOrthographicProjection, CameraPerspectiveProjection};
+use crate::gfx::gui::Gui;
 use crate::gfx::instance::InstanceRaw;
 use crate::gfx::model::Model;
-use crate::gfx::sprite_mesh::{SPRITE_VERTICES, SPRITE_INDICES};
-use crate::gfx::texture::{Texture, self};
+use crate::gfx::sprite_mesh::{SPRITE_INDICES, SPRITE_VERTICES, UI_SPRITE_VERTICES};
+use crate::gfx::texture::{self, Texture};
 use crate::gfx::texture_array::TextureArray;
 use crate::gfx::vertex::Vertex;
 use crate::input::Input;
@@ -33,6 +34,10 @@ use winit::window::{Fullscreen, Window};
  * the entities they need based on their ids.
  */
 
+const Z_NEAR: f32 = 0.1;
+const Z_FAR: f32 = 100.0;
+const UI_SCALE: f32 = 28.0;
+
 pub struct State {
     window: Window,
     input: Input,
@@ -42,15 +47,20 @@ pub struct State {
     config: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    diffuse_texture_array: TextureArray,
+    ui_render_pipeline: wgpu::RenderPipeline,
+    texture_array: TextureArray,
+    ui_texture_array: TextureArray,
     depth_texture: Texture,
     camera: Camera,
+    ui_camera: Camera,
     model: Model,
+    ui_model: Model,
     chunk: Chunk,
     ecs: EntityManager,
     systems: SystemManager,
     player: usize,
     entity_cache: Vec<usize>,
+    gui: Gui,
 }
 
 impl State {
@@ -97,7 +107,7 @@ impl State {
             format: surface_format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::AutoNoVsync,
+            present_mode: wgpu::PresentMode::AutoVsync,
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
         };
@@ -105,30 +115,48 @@ impl State {
 
         let happy_tree = Texture::from_path(&device, &queue, "happy-tree.png").unwrap();
         let sad_tree = Texture::from_path(&device, &queue, "sad-tree.png").unwrap();
-        let diffuse_texture_array = TextureArray::new(&device, vec![happy_tree, sad_tree]).unwrap();
+        let texture_array = TextureArray::new(&device, vec![happy_tree, sad_tree]).unwrap();
+        let glyphs = Texture::from_path(&device, &queue, "bitka.png").unwrap();
+        let ui_texture_array = TextureArray::new(&device, vec![glyphs]).unwrap();
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("gfx/shader.wgsl").into()),
         });
 
+        let ui_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("gfx/ui_shader.wgsl").into()),
+        });
+
         let camera = Camera::new(
             &device,
-            CameraPerspectiveProjection::new(
+            Box::new(CameraPerspectiveProjection::new(
                 cgmath::Vector3::zero(),
                 90.0,
-                0.1,
-                100.0,
+                Z_NEAR,
+                Z_FAR,
                 config.width,
                 config.height,
-            ),
+            )),
+        );
+
+        let ui_camera = Camera::new(
+            &device,
+            Box::new(CameraOrthographicProjection::new(
+                Z_NEAR,
+                Z_FAR,
+                config.width,
+                config.height,
+                UI_SCALE,
+            )),
         );
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    &diffuse_texture_array.bind_group_layout(),
+                    &texture_array.bind_group_layout(),
                     camera.bind_group_layout(),
                 ],
                 push_constant_ranges: &[],
@@ -178,7 +206,59 @@ impl State {
             multiview: None,
         });
 
+        let ui_render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[
+                    &ui_texture_array.bind_group_layout(),
+                    camera.bind_group_layout(),
+                ],
+                push_constant_ranges: &[],
+            });
+
+        let ui_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&ui_render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &ui_shader,
+                entry_point: "vs_main",
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &ui_shader,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: texture::Texture::DEPTH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        });
+
         let model = Model::new(&device, SPRITE_VERTICES, SPRITE_INDICES);
+        let ui_model = Model::new(&device, UI_SPRITE_VERTICES, SPRITE_INDICES);
 
         let input = Input::new();
 
@@ -227,6 +307,9 @@ impl State {
         systems.add_system(PlayerMovementSystem {});
         systems.add_system(EntityInstancesSystem::new());
 
+        let entity_cache = Vec::new();
+        let gui = Gui::new();
+
         Self {
             window,
             input,
@@ -236,15 +319,20 @@ impl State {
             config,
             size,
             render_pipeline,
-            diffuse_texture_array,
+            ui_render_pipeline,
+            texture_array,
+            ui_texture_array,
             depth_texture,
             camera,
+            ui_camera,
             model,
+            ui_model,
             chunk,
             ecs,
             systems,
             player,
-            entity_cache: Vec::new(),
+            entity_cache,
+            gui,
         }
     }
 
@@ -266,6 +354,7 @@ impl State {
         self.config.height = new_size.height;
         self.surface.configure(&self.device, &self.config);
         self.camera.resize(self.config.width, self.config.height);
+        self.ui_camera.resize(self.config.width, self.config.height);
         self.depth_texture = Texture::create_depth_texture(
             &self.device,
             self.config.width,
@@ -339,6 +428,7 @@ impl State {
         }
 
         self.camera.update(&self.queue);
+        self.ui_camera.update(&self.queue);
 
         self.input.update();
     }
@@ -348,6 +438,7 @@ impl State {
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -381,7 +472,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, self.diffuse_texture_array.bind_group(), &[]);
+            render_pass.set_bind_group(0, self.texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.camera.bind_group(), &[]);
 
             if let Some(model) = &self.chunk.model {
@@ -406,6 +497,56 @@ impl State {
         }
 
         self.queue.submit(once(encoder.finish()));
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view(),
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
+            });
+
+            render_pass.set_pipeline(&self.ui_render_pipeline);
+            render_pass.set_bind_group(0, self.ui_texture_array.bind_group(), &[]);
+            render_pass.set_bind_group(1, self.ui_camera.bind_group(), &[]);
+
+            self.gui.clear();
+            self.gui.write("Health: 100% Damage: 50% Money: $20");
+
+            self.ui_model
+                .update_instances(&self.device, self.gui.instances());
+            render_pass.set_vertex_buffer(0, self.ui_model.vertices().slice(..));
+            render_pass
+                .set_index_buffer(self.ui_model.indices().slice(..), wgpu::IndexFormat::Uint32);
+            render_pass.set_vertex_buffer(1, self.ui_model.instances().slice(..));
+            render_pass.draw_indexed(
+                0..self.ui_model.num_indices(),
+                0,
+                0..self.ui_model.num_instances(),
+            );
+        }
+
+        self.queue.submit(once(encoder.finish()));
+
         output.present();
 
         Ok(())

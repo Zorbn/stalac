@@ -62,7 +62,7 @@ impl InstanceRaw {
                     offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
                     shader_location: 7,
                     format: wgpu::VertexFormat::Uint32,
-                }
+                },
             ],
         }
     }

@@ -1,5 +1,5 @@
-use crate::bytes::to_bytes;
 use super::instance::Instance;
+use crate::bytes::to_bytes;
 use wgpu::util::DeviceExt;
 
 use super::vertex::Vertex;
