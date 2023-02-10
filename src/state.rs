@@ -265,21 +265,13 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
-        let mut player_actor = Actor::new(
-            cgmath::Vector3::zero(),
-            HUMANOID_SIZE,
-            6.0,
-        );
+        let mut player_actor = Actor::new(cgmath::Vector3::zero(), HUMANOID_SIZE, 6.0);
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
             player_actor.teleport(player_spawn);
         }
 
-        let mut enemy_actor = Actor::new(
-            cgmath::Vector3::zero(),
-            HUMANOID_SIZE,
-            6.0,
-        );
+        let mut enemy_actor = Actor::new(cgmath::Vector3::zero(), HUMANOID_SIZE, 6.0);
 
         if let Some(enemy_spawn) = chunk.get_spawn_position(&mut rng) {
             enemy_actor.teleport(enemy_spawn);
@@ -289,17 +281,17 @@ impl State {
         let player = ecs.add_entity();
         ecs.add_component_to_entity(player, player_actor);
         ecs.add_component_to_entity(player, Player {});
-        ecs.add_component_to_entity(player, Health {});
+        ecs.add_component_to_entity(player, Health::new(100));
         let enemy = ecs.add_entity();
         ecs.add_component_to_entity(enemy, enemy_actor);
         ecs.add_component_to_entity(enemy, ChaseAi::new());
         ecs.add_component_to_entity(enemy, Display::new(1));
-        ecs.add_component_to_entity(enemy, Fighter::new());
+        ecs.add_component_to_entity(enemy, Fighter::new(10, 0.5));
 
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});
         systems.add_system(ChaseAiSystem {});
-        systems.add_system(PlayerMovementSystem::new());
+        systems.add_system(PlayerMovementSystem {});
         systems.add_system(EntityInstancesSystem::new());
         systems.add_system(FighterSystem::new());
 

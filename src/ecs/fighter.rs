@@ -1,23 +1,38 @@
-use std::{borrow::{Borrow, BorrowMut}, collections::HashSet};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    collections::HashSet,
+};
 
 use crate::ecs::actor::Actor;
 
 use super::{ecs::System, health::Health};
 
 pub struct Fighter {
+    attack_damage: i32,
     attack_cooldown: f32,
+    attack_timer: f32,
 }
 
 impl Fighter {
-    pub fn new() -> Self {
+    pub fn new(attack_damage: i32, attack_cooldown: f32) -> Self {
         Self {
-            attack_cooldown: 1.0,
+            attack_damage,
+            attack_cooldown,
+            attack_timer: 0.0,
         }
     }
 
+    pub fn update(&mut self, delta_time: f32) {
+        self.attack_timer -= delta_time;
+    }
+
     pub fn get_attack(&mut self) -> i32 {
-        self.attack_cooldown = 0.0;
-        10
+        if self.attack_timer > 0.0 {
+            return 0;
+        }
+
+        self.attack_timer = self.attack_cooldown;
+        self.attack_damage
     }
 }
 
@@ -27,7 +42,9 @@ pub struct FighterSystem {
 
 impl FighterSystem {
     pub fn new() -> Self {
-        Self { nearby_entities: HashSet::new() }
+        Self {
+            nearby_entities: HashSet::new(),
+        }
     }
 }
 
@@ -39,16 +56,16 @@ impl System for FighterSystem {
         chunk: &mut crate::chunk::Chunk,
         _input: &mut crate::input::Input,
         _player: usize,
-        _delta_time: f32,
+        delta_time: f32,
     ) {
-
         ecs.get_entities_with_both::<Fighter, Actor>(entity_cache);
 
+        if entity_cache.len() == 0 {
+            return;
+        }
+
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
-        let mut fighters = match ecs.borrow_components::<Fighter>() {
-            Some(f) => f,
-            None => return,
-        };
+        let mut fighters = ecs.borrow_components::<Fighter>().unwrap();
         let mut healths = match ecs.borrow_components::<Health>() {
             Some(h) => h,
             None => return,
@@ -57,6 +74,8 @@ impl System for FighterSystem {
         for entity in entity_cache {
             let actor = actors.borrow_mut().get_mut(*entity).unwrap();
             let fighter = fighters.borrow_mut().get_mut(*entity).unwrap();
+
+            fighter.update(delta_time);
 
             actor.get_nearby_entities(chunk, &mut self.nearby_entities);
 

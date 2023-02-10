@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, collections::HashSet};
+use std::borrow::BorrowMut;
 
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
@@ -14,8 +14,7 @@ const MOUSE_SENSITIVITY: f32 = 0.1;
 
 pub struct Player {}
 
-pub struct PlayerMovementSystem {
-}
+pub struct PlayerMovementSystem {}
 
 impl System for PlayerMovementSystem {
     fn update(

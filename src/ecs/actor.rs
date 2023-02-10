@@ -195,6 +195,10 @@ impl System for ActorSystem {
     ) {
         ecs.get_entities_with::<Actor>(entity_cache);
 
+        if entity_cache.len() == 0 {
+            return;
+        }
+
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {

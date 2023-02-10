@@ -1,5 +1,3 @@
-use super::ecs::System;
-
 pub struct Display {
     tex_index: u32,
 }
