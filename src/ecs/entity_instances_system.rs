@@ -30,7 +30,7 @@ impl System for EntityInstancesSystem {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        _chunk: &Chunk,
+        _chunk: &mut Chunk,
         _input: &mut Input,
         player: usize,
         _delta_time: f32,
@@ -45,7 +45,7 @@ impl System for EntityInstancesSystem {
             .unwrap()
             .position();
 
-        ecs.get_entities_with::<Display, Actor>(entity_cache);
+        ecs.get_entities_with_both::<Display, Actor>(entity_cache);
 
         if entity_cache.len() == 0 {
             return;
@@ -54,9 +54,9 @@ impl System for EntityInstancesSystem {
         let mut displays = ecs.borrow_components::<Display>().unwrap();
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for id in entity_cache {
-            let display = displays.borrow_mut().get(*id).unwrap();
-            let actor = actors.borrow_mut().get(*id).unwrap();
+        for entity in entity_cache {
+            let display = displays.borrow_mut().get(*entity).unwrap();
+            let actor = actors.borrow_mut().get(*entity).unwrap();
 
             let mut instance = Instance {
                 position: actor.position(),

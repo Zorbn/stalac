@@ -3,6 +3,8 @@ use std::{
     collections::HashMap,
 };
 
+use crate::{input::Input, chunk::Chunk};
+
 pub struct EntityManager {
     entities_count: usize,
     component_stores: Vec<Box<dyn AnyComponentStore>>,
@@ -71,7 +73,17 @@ impl EntityManager {
         None
     }
 
-    pub fn get_entities_with<T1: 'static, T2: 'static>(&self, entities: &mut Vec<usize>) {
+    pub fn get_entities_with<T: 'static>(&self, entities: &mut Vec<usize>) {
+        let store = self.borrow_components::<T>();
+
+        entities.clear();
+
+        if let Some(store) = store {
+            entities.extend(store.get_entities());
+        }
+    }
+
+    pub fn get_entities_with_both<T1: 'static, T2: 'static>(&self, entities: &mut Vec<usize>) {
         let first_store = self.borrow_components::<T1>();
         let second_store = self.borrow_components::<T2>();
 
@@ -143,6 +155,10 @@ impl<T> ComponentStore<T> {
     pub fn get_all(&mut self) -> &mut Vec<T> {
         &mut self.components
     }
+
+    pub fn get_entities(&self) -> &Vec<usize> {
+        &self.entities
+    }
 }
 
 pub trait AnyComponentStore {
@@ -180,8 +196,8 @@ impl SystemManager {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
+        chunk: &mut Chunk,
+        input: &mut Input,
         player: usize,
         delta_time: f32,
     ) {
@@ -219,8 +235,8 @@ pub trait System {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
+        chunk: &mut Chunk,
+        input: &mut Input,
         player: usize,
         delta_time: f32,
     );
@@ -233,8 +249,8 @@ pub trait AnySystemStore {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
+        chunk: &mut Chunk,
+        input: &mut Input,
         player: usize,
         delta_time: f32,
     );
@@ -259,8 +275,8 @@ impl<T: 'static + System> AnySystemStore for SystemStore<T> {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &crate::chunk::Chunk,
-        input: &mut crate::input::Input,
+        chunk: &mut Chunk,
+        input: &mut Input,
         player: usize,
         delta_time: f32,
     ) {

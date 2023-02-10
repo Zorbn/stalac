@@ -21,12 +21,12 @@ impl System for PlayerMovementSystem {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &Chunk,
+        chunk: &mut Chunk,
         input: &mut Input,
         _player: usize,
         delta_time: f32,
     ) {
-        ecs.get_entities_with::<Player, Actor>(entity_cache);
+        ecs.get_entities_with_both::<Player, Actor>(entity_cache);
 
         if entity_cache.len() == 0 {
             return;
@@ -34,8 +34,8 @@ impl System for PlayerMovementSystem {
 
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for id in entity_cache {
-            let actor = actors.borrow_mut().get(*id).unwrap();
+        for entity in entity_cache {
+            let actor = actors.borrow_mut().get(*entity).unwrap();
 
             let mut dir_z = 0.0;
             let mut dir_x = 0.0;
@@ -71,12 +71,14 @@ impl System for PlayerMovementSystem {
             }
 
             actor.step(
+                *entity,
                 cgmath::Vector3::new(dir.x, 0.0, 0.0),
                 actor.speed() * delta_time,
                 chunk,
                 no_clip,
             );
             actor.step(
+                *entity,
                 cgmath::Vector3::new(0.0, 0.0, dir.z),
                 actor.speed() * delta_time,
                 chunk,

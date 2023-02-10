@@ -410,7 +410,7 @@ impl State {
         self.systems.update(
             &mut self.ecs,
             &mut self.entity_cache,
-            &self.chunk,
+            &mut self.chunk,
             &mut self.input,
             self.player,
             delta_time,
@@ -475,7 +475,7 @@ impl State {
             render_pass.set_bind_group(0, self.texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.camera.bind_group(), &[]);
 
-            if let Some(model) = &self.chunk.model {
+            if let Some(model) = &self.chunk.model() {
                 render_pass.set_vertex_buffer(0, model.vertices().slice(..));
                 render_pass.set_index_buffer(model.indices().slice(..), wgpu::IndexFormat::Uint32);
                 render_pass.set_vertex_buffer(1, model.instances().slice(..));

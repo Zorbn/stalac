@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use crate::{chunk::Chunk, input::Input};
 
 use super::ecs::{EntityManager, System};
@@ -30,9 +32,10 @@ impl Actor {
 
     pub fn step(
         &mut self,
+        entity: usize,
         dir: cgmath::Vector3<f32>,
         speed: f32,
-        chunk: &Chunk,
+        chunk: &mut Chunk,
         no_clip: bool,
     ) -> bool {
         let old_position = self.position;
@@ -47,6 +50,18 @@ impl Actor {
         {
             self.position = old_position;
             return false;
+        }
+
+        // Since the actor has moved, it may be occupying new tiles, so the chunk must be updated.
+        for i in 0..4 {
+            let x_offset = (i % 2) * 2 - 1;
+            let z_offset = (i / 2) * 2 - 1;
+
+            let old_block_position = self.get_corner_pos(old_position, x_offset, z_offset);
+            let new_block_position = self.get_corner_pos(self.position, x_offset, z_offset);
+
+            chunk.remove_entity_from_block(entity, old_block_position.x, old_block_position.z);
+            chunk.add_entity_to_block(entity, new_block_position.x, new_block_position.z);
         }
 
         true
@@ -73,6 +88,10 @@ impl Actor {
 
     fn apply_gravity(&mut self, delta_time: f32) {
         self.y_velocity -= GRAVITY * delta_time;
+    }
+
+    fn get_corner_pos(&self, position: cgmath::Vector3<f32>, x_offset: i32, z_offset: i32) -> cgmath::Vector3<i32> {
+        (position + cgmath::Vector3::new(self.size.x * x_offset as f32, 0.0, self.size.z * z_offset as f32)).cast::<i32>().unwrap()
     }
 
     pub fn jump(&mut self) {
@@ -118,18 +137,22 @@ impl System for ActorSystem {
     fn update(
         &mut self,
         ecs: &mut EntityManager,
-        _entity_cache: &mut Vec<usize>,
-        chunk: &Chunk,
+        entity_cache: &mut Vec<usize>,
+        chunk: &mut Chunk,
         _input: &mut Input,
         _player: usize,
         delta_time: f32,
     ) {
+        ecs.get_entities_with::<Actor>(entity_cache);
+
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for actor in actors.get_all() {
+        for entity in entity_cache {
+            let actor = actors.borrow_mut().get(*entity).unwrap();
+
             actor.grounded = chunk
                 .get_block_collision(
-                    actor.position - cgmath::Vector3::new(0.0, 0.1, 0.0),
+                    actor.position - cgmath::Vector3::new(0.0, 0.01, 0.0),
                     actor.size,
                 )
                 .is_some();
@@ -143,6 +166,7 @@ impl System for ActorSystem {
             actor.apply_gravity(delta_time);
 
             if !actor.step(
+                *entity,
                 cgmath::Vector3::unit_y(),
                 actor.y_velocity() * delta_time,
                 chunk,

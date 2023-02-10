@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::direction::{dir_to_offset, index_to_dir};
 use crate::gfx::cube_mesh::{CUBE_INDICES, CUBE_VERTICES};
 use crate::gfx::instance::Instance;
@@ -14,16 +16,24 @@ const CHUNK_LEN: usize = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE;
 const INV_BLOCK_SIZE: f32 = 1.0 / BLOCK_SIZE as f32;
 
 pub struct Chunk {
-    pub model: Option<Model>,
+    model: Option<Model>,
     blocks: [bool; CHUNK_LEN],
+    entities_on_blocks: Vec<HashSet<usize>>,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
 }
 
 impl Chunk {
     pub fn new() -> Self {
+        let mut entities_on_blocks = Vec::new();
+        entities_on_blocks.reserve(CHUNK_LEN);
+        for _ in 0..CHUNK_LEN {
+            entities_on_blocks.push(HashSet::new());
+        }
+
         Self {
             blocks: [false; CHUNK_LEN],
+            entities_on_blocks,
             model: None,
             vertices: Vec::new(),
             indices: Vec::new(),
@@ -210,5 +220,35 @@ impl Chunk {
         }
 
         None
+    }
+
+    pub fn model(&self) -> &Option<Model> {
+        &self.model
+    }
+
+    pub fn add_entity_to_block(&mut self, entity: usize, x: i32, z: i32) {
+        let i_chunk_size = CHUNK_SIZE as i32;
+        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size
+        {
+            return;
+        }
+
+        let ux = x as usize;
+        let uz = z as usize;
+
+        self.entities_on_blocks[ux + uz * CHUNK_SIZE].insert(entity);
+    }
+
+    pub fn remove_entity_from_block(&mut self, entity: usize, x: i32, z: i32) {
+        let i_chunk_size = CHUNK_SIZE as i32;
+        if x < 0 || x >= i_chunk_size || z < 0 || z >= i_chunk_size
+        {
+            return;
+        }
+
+        let ux = x as usize;
+        let uz = z as usize;
+
+        self.entities_on_blocks[ux + uz * CHUNK_SIZE].remove(&entity);
     }
 }

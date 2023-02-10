@@ -39,7 +39,7 @@ impl System for ChaseAiSystem {
         &mut self,
         ecs: &mut EntityManager,
         entity_cache: &mut Vec<usize>,
-        chunk: &Chunk,
+        chunk: &mut Chunk,
         _input: &mut Input,
         player: usize,
         delta_time: f32,
@@ -52,7 +52,7 @@ impl System for ChaseAiSystem {
             .unwrap()
             .position();
 
-        ecs.get_entities_with::<ChaseAi, Actor>(entity_cache);
+        ecs.get_entities_with_both::<ChaseAi, Actor>(entity_cache);
 
         if entity_cache.len() == 0 {
             return;
@@ -61,9 +61,9 @@ impl System for ChaseAiSystem {
         let mut ais = ecs.borrow_components::<ChaseAi>().unwrap();
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
 
-        for id in entity_cache {
-            let ai = ais.borrow_mut().get(*id).unwrap();
-            let actor = actors.borrow_mut().get(*id).unwrap();
+        for entity in entity_cache {
+            let ai = ais.borrow_mut().get(*entity).unwrap();
+            let actor = actors.borrow_mut().get(*entity).unwrap();
 
             ai.repath_timer += delta_time;
 
@@ -92,7 +92,7 @@ impl System for ChaseAiSystem {
 
                 let dir = cgmath::Vector3::new(next_f.x - position.x, 0.0, next_f.z - position.z)
                     .normalize();
-                actor.step(dir, 4.0 * delta_time, chunk, true);
+                actor.step(*entity, dir, 4.0 * delta_time, chunk, true);
             } else {
                 ai.next = ai.path.pop();
             }
