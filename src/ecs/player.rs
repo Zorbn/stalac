@@ -7,7 +7,7 @@ use crate::{chunk::Chunk, gfx::camera::Camera, input::Input};
 
 use super::{
     actor::Actor,
-    ecs::{EntityManager, System}, fighter::Fighter,
+    ecs::{EntityManager, System},
 };
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
@@ -15,13 +15,6 @@ const MOUSE_SENSITIVITY: f32 = 0.1;
 pub struct Player {}
 
 pub struct PlayerMovementSystem {
-    nearby_entities: HashSet<usize>,
-}
-
-impl PlayerMovementSystem {
-    pub fn new() -> Self {
-        Self { nearby_entities: HashSet::new() }
-    }
 }
 
 impl System for PlayerMovementSystem {
@@ -41,7 +34,6 @@ impl System for PlayerMovementSystem {
         }
 
         let mut actors = ecs.borrow_components::<Actor>().unwrap();
-        let mut fighters = ecs.borrow_components::<Fighter>();
 
         for entity in entity_cache {
             let actor = actors.borrow_mut().get_mut(*entity).unwrap();
@@ -98,38 +90,6 @@ impl System for PlayerMovementSystem {
                 input.mouse_delta_y() * MOUSE_SENSITIVITY,
                 -input.mouse_delta_x() * MOUSE_SENSITIVITY,
             );
-
-            actor.get_nearby_entities(chunk, &mut self.nearby_entities);
-
-            let position = actor.position();
-            let size = actor.size();
-
-            drop(actor);
-
-            // TODO: Fighters should have their own system to attack the player with.
-            let fighters = match &mut fighters {
-                Some(f) => f,
-                None => continue,
-            };
-
-            let mut damage_accumulator = 0;
-
-            for nearby_entity in &self.nearby_entities {
-                if nearby_entity == entity {
-                    continue;
-                }
-
-                let nearby_actor = actors.borrow_mut().get_mut(*nearby_entity).unwrap();
-                if !nearby_actor.intersects(position, size) {
-                    continue;
-                }
-
-                if let Some(fighter) = fighters.borrow_mut().get_mut(*nearby_entity) {
-                    damage_accumulator += fighter.get_attack();
-                }
-            }
-
-            println!("{}", damage_accumulator);
         }
     }
 }

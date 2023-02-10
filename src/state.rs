@@ -4,7 +4,8 @@ use crate::ecs::chase_ai::{ChaseAi, ChaseAiSystem};
 use crate::ecs::display::Display;
 use crate::ecs::ecs::{EntityManager, SystemManager};
 use crate::ecs::entity_instances_system::EntityInstancesSystem;
-use crate::ecs::fighter::Fighter;
+use crate::ecs::fighter::{Fighter, FighterSystem};
+use crate::ecs::health::Health;
 use crate::ecs::player::{Player, PlayerMovementSystem};
 use crate::gfx::camera::{Camera, CameraOrthographicProjection, CameraPerspectiveProjection};
 use crate::gfx::gui::Gui;
@@ -288,6 +289,7 @@ impl State {
         let player = ecs.add_entity();
         ecs.add_component_to_entity(player, player_actor);
         ecs.add_component_to_entity(player, Player {});
+        ecs.add_component_to_entity(player, Health {});
         let enemy = ecs.add_entity();
         ecs.add_component_to_entity(enemy, enemy_actor);
         ecs.add_component_to_entity(enemy, ChaseAi::new());
@@ -299,6 +301,7 @@ impl State {
         systems.add_system(ChaseAiSystem {});
         systems.add_system(PlayerMovementSystem::new());
         systems.add_system(EntityInstancesSystem::new());
+        systems.add_system(FighterSystem::new());
 
         let entity_cache = Vec::new();
         let gui = Gui::new();
