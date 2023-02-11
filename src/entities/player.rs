@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     actor::Actor,
-    ecs::{System, Ecs},
+    ecs::{Ecs, System},
 };
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
@@ -29,7 +29,11 @@ impl System for PlayerMovementSystem {
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, .. } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            ..
+        } = ecs;
 
         if !manager.get_entities_with_both::<Player, Actor>(entity_cache) {
             return;

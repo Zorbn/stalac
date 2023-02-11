@@ -125,7 +125,10 @@ impl EntityManager {
         !entities.is_empty()
     }
 
-    pub fn get_entities_with_both<T1: 'static, T2: 'static>(&self, entities: &mut Vec<usize>) -> bool {
+    pub fn get_entities_with_both<T1: 'static, T2: 'static>(
+        &self,
+        entities: &mut Vec<usize>,
+    ) -> bool {
         let first_store = self.borrow_components::<T1>();
         let second_store = self.borrow_components::<T2>();
 
@@ -339,7 +342,6 @@ impl<T: 'static + System> AnySystemStore for SystemStore<T> {
         gui: &mut Gui,
         delta_time: f32,
     ) {
-        self.system
-            .update(ecs, chunk, input, gui, delta_time);
+        self.system.update(ecs, chunk, input, gui, delta_time);
     }
 }

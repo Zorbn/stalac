@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     actor::Actor,
-    ecs::{System, Ecs},
+    ecs::{Ecs, System},
     player::Player,
 };
 
@@ -45,7 +45,11 @@ impl System for ChaseAiSystem {
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, .. } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            ..
+        } = ecs;
 
         manager.get_entities_with_both::<Player, Actor>(entity_cache);
 

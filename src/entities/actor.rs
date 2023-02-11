@@ -6,7 +6,7 @@ use crate::{
     input::Input,
 };
 
-use super::ecs::{System, Ecs};
+use super::ecs::{Ecs, System};
 
 const GRAVITY: f32 = 30.0;
 const JUMP_FORCE: f32 = 9.0;
@@ -193,7 +193,11 @@ impl System for ActorSystem {
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, .. } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            ..
+        } = ecs;
 
         if !manager.get_entities_with::<Actor>(entity_cache) {
             return;

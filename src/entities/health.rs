@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use super::ecs::{System, Ecs};
+use super::ecs::{Ecs, System};
 
 pub struct Health {
     amount: i32,
@@ -31,7 +31,11 @@ impl System for HealthSystem {
         _gui: &mut crate::gfx::gui::Gui,
         _delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, queue } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            queue,
+        } = ecs;
 
         if !manager.get_entities_with::<Health>(entity_cache) {
             return;

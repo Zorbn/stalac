@@ -2,7 +2,7 @@ use crate::chunk::Chunk;
 use crate::entities::actor::{Actor, ActorSystem};
 use crate::entities::chase_ai::{ChaseAi, ChaseAiSystem};
 use crate::entities::display::Display;
-use crate::entities::ecs::{EntityManager, SystemManager, Ecs, CommandQueue};
+use crate::entities::ecs::{CommandQueue, Ecs, EntityManager, SystemManager};
 use crate::entities::entity_instances_system::EntityInstancesSystem;
 use crate::entities::fighter::{Fighter, FighterSystem};
 use crate::entities::health::{Health, HealthSystem};
@@ -285,13 +285,16 @@ impl State {
         let player = ecs.manager.add_entity();
         ecs.manager.add_component_to_entity(player, player_actor);
         ecs.manager.add_component_to_entity(player, Player {});
-        ecs.manager.add_component_to_entity(player, Health::new(100));
-        ecs.manager.add_component_to_entity(player, HealthDisplay {});
+        ecs.manager
+            .add_component_to_entity(player, Health::new(100));
+        ecs.manager
+            .add_component_to_entity(player, HealthDisplay {});
         let enemy = ecs.manager.add_entity();
         ecs.manager.add_component_to_entity(enemy, enemy_actor);
         ecs.manager.add_component_to_entity(enemy, ChaseAi::new());
         ecs.manager.add_component_to_entity(enemy, Display::new(1));
-        ecs.manager.add_component_to_entity(enemy, Fighter::new(10, 0.5));
+        ecs.manager
+            .add_component_to_entity(enemy, Fighter::new(10, 0.5));
 
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});

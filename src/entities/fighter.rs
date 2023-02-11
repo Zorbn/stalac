@@ -3,9 +3,13 @@ use std::{
     collections::HashSet,
 };
 
-use crate::{gfx::gui::Gui, input::Input, chunk::Chunk};
+use crate::{chunk::Chunk, gfx::gui::Gui, input::Input};
 
-use super::{actor::Actor, ecs::{System, Ecs}, health::Health};
+use super::{
+    actor::Actor,
+    ecs::{Ecs, System},
+    health::Health,
+};
 
 pub struct Fighter {
     attack_damage: i32,
@@ -57,7 +61,11 @@ impl System for FighterSystem {
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, .. } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            ..
+        } = ecs;
 
         if !manager.get_entities_with_both::<Fighter, Actor>(entity_cache) {
             return;

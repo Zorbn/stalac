@@ -10,7 +10,7 @@ use cgmath::prelude::*;
 use super::{
     actor::Actor,
     display::Display,
-    ecs::{System, Ecs},
+    ecs::{Ecs, System},
     player::Player,
 };
 
@@ -39,7 +39,11 @@ impl System for EntityInstancesSystem {
         _gui: &mut Gui,
         _delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, .. } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            ..
+        } = ecs;
 
         manager.get_entities_with_both::<Player, Actor>(entity_cache);
 

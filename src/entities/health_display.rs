@@ -1,8 +1,11 @@
 use std::borrow::Borrow;
 
-use crate::{gfx::gui::Gui, input::Input, chunk::Chunk};
+use crate::{chunk::Chunk, gfx::gui::Gui, input::Input};
 
-use super::{ecs::{System, Ecs}, health::Health};
+use super::{
+    ecs::{Ecs, System},
+    health::Health,
+};
 
 pub struct HealthDisplay {}
 
@@ -17,7 +20,11 @@ impl System for HealthDisplaySystem {
         gui: &mut Gui,
         _delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, .. } = ecs;
+        let Ecs {
+            manager,
+            entity_cache,
+            ..
+        } = ecs;
 
         if !manager.get_entities_with_both::<Health, HealthDisplay>(entity_cache) {
             return;
