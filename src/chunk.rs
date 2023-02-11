@@ -6,7 +6,7 @@ use crate::gfx::instance::Instance;
 use crate::gfx::model::Model;
 use crate::gfx::vertex::Vertex;
 use crate::rng::Rng;
-use cgmath::Zero;
+use cgmath::prelude::*;
 
 pub const BLOCK_SIZE: i32 = 3;
 pub const BLOCK_SIZE_F: f32 = BLOCK_SIZE as f32;
@@ -15,12 +15,19 @@ const CHUNK_HEIGHT: usize = 8;
 const CHUNK_LEN: usize = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE;
 const INV_BLOCK_SIZE: f32 = 1.0 / BLOCK_SIZE as f32;
 
+pub struct RaycastHit {
+    pub distance: f32,
+    pub position: cgmath::Vector3<i32>,
+    pub last_position: cgmath::Vector3<i32>,
+}
+
 pub struct Chunk {
     model: Option<Model>,
     blocks: [bool; CHUNK_LEN],
     entities_on_blocks: Vec<HashSet<usize>>,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
+    is_dirty: bool,
 }
 
 impl Chunk {
@@ -37,6 +44,7 @@ impl Chunk {
             model: None,
             vertices: Vec::new(),
             indices: Vec::new(),
+            is_dirty: false,
         }
     }
 
@@ -70,7 +78,15 @@ impl Chunk {
         }
     }
 
+    pub fn update_mesh(&mut self, device: &wgpu::Device) {
+        if self.is_dirty {
+            self.generate_mesh(device);
+        }
+    }
+
     pub fn generate_mesh(&mut self, device: &wgpu::Device) {
+        self.is_dirty = false;
+
         self.vertices.clear();
         self.indices.clear();
 
@@ -143,6 +159,7 @@ impl Chunk {
         let uz = z as usize;
 
         self.blocks[ux + uy * CHUNK_SIZE + uz * CHUNK_SIZE * CHUNK_HEIGHT] = solid;
+        self.is_dirty = true;
     }
 
     pub fn get_block(&self, x: i32, y: i32, z: i32) -> bool {
@@ -171,8 +188,8 @@ impl Chunk {
         let start = position - size * 0.5;
 
         let steps = size.cast::<i32>().expect("Failed to calculate step count!")
-            + cgmath::Vector3::new(1, 1, 1);
-        let mut interp = cgmath::Vector3::<f32>::new(0.0, 0.0, 0.0);
+            + cgmath::vec3(1, 1, 1);
+        let mut interp = cgmath::vec3(0.0, 0.0, 0.0);
 
         for x in 0..=steps.x {
             interp.x = start.x + x as f32 / steps.x as f32 * size.x;
@@ -195,6 +212,66 @@ impl Chunk {
         None
     }
 
+    pub fn raycast(&self, start: cgmath::Vector3<f32>, dir: cgmath::Vector3<f32>, range: f32) -> Option<RaycastHit> {
+        let tile_dir = dir.map(|n| n.signum()).cast::<i32>().unwrap();
+        let step = (1.0 / dir).map(|n| n.abs());
+        let mut initial_step = cgmath::Vector3::zero();
+
+        initial_step.x = if dir.x > 0.0 {
+            start.x.ceil() - start.x
+        } else {
+            start.x - start.x.floor()
+        }  * step.x;
+
+        initial_step.y = if dir.y > 0.0 {
+            start.y.ceil() - start.y
+        } else {
+            start.y - start.y.floor()
+        }  * step.y;
+
+        initial_step.z = if dir.z > 0.0 {
+            start.z.ceil() - start.z
+        } else {
+            start.z - start.z.floor()
+        }  * step.z;
+
+        let mut dist_to_next = initial_step;
+        let mut block_pos = start.map(|n| n.floor()).cast::<i32>().unwrap();
+        let mut last_pos = block_pos;
+        let mut last_dist_to_next: f32 = 0.0;
+
+        let mut hit_block = self.get_block(block_pos.x, block_pos.y, block_pos.z);
+        while !hit_block && last_dist_to_next < range {
+            last_pos = block_pos;
+
+            if dist_to_next.x < dist_to_next.y && dist_to_next.x < dist_to_next.z {
+                last_dist_to_next = dist_to_next.x;
+                dist_to_next.x += step.x;
+                block_pos.x += tile_dir.x;
+            } else if dist_to_next.y < dist_to_next.x && dist_to_next.y < dist_to_next.z {
+                last_dist_to_next = dist_to_next.y;
+                dist_to_next.y += step.y;
+                block_pos.y += tile_dir.y;
+            } else {
+                last_dist_to_next = dist_to_next.z;
+                dist_to_next.z += step.z;
+                block_pos.z += tile_dir.z;
+            }
+
+            hit_block = self.get_block(block_pos.x, block_pos.y, block_pos.z);
+        }
+
+        if !hit_block {
+            None
+        } else {
+            Some(RaycastHit {
+                distance: last_dist_to_next,
+                position: block_pos,
+                last_position: last_pos,
+            })
+        }
+    }
+
     pub fn get_spawn_position(&self, rng: &mut Rng) -> Option<cgmath::Vector3<f32>> {
         let i_chunk_len = CHUNK_LEN as i32;
         let i_chunk_size = CHUNK_SIZE as i32;
@@ -212,7 +289,7 @@ impl Chunk {
                 continue;
             }
 
-            return Some(cgmath::Vector3::new(
+            return Some(cgmath::vec3(
                 (x as f32 + 0.5) * BLOCK_SIZE_F,
                 (y as f32 + 0.5) * BLOCK_SIZE_F,
                 (z as f32 + 0.5) * BLOCK_SIZE_F,

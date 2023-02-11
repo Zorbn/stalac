@@ -30,7 +30,7 @@ use winit::window::{Fullscreen, Window};
 const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 100.0;
 const UI_SCALE: f32 = 28.0;
-const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::Vector3::new(1.0, 0.8, 1.0);
+const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::vec3(1.0, 0.8, 1.0);
 
 pub struct State {
     window: Window,
@@ -428,6 +428,7 @@ impl State {
 
         self.camera.update(&self.queue);
         self.ui_camera.update(&self.queue);
+        self.chunk.update_mesh(&self.device);
 
         self.input.update();
     }

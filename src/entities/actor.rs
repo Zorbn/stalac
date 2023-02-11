@@ -122,7 +122,7 @@ impl Actor {
         z_offset: i32,
     ) -> cgmath::Vector3<i32> {
         (position
-            + cgmath::Vector3::new(
+            + cgmath::vec3(
                 self.size.x * x_offset as f32,
                 0.0,
                 self.size.z * z_offset as f32,
@@ -158,7 +158,7 @@ impl Actor {
     }
 
     pub fn head_position(&self) -> cgmath::Vector3<f32> {
-        self.position + cgmath::Vector3::new(0.0, self.size.y * 0.4, 0.0)
+        self.position + cgmath::vec3(0.0, self.size.y * 0.4, 0.0)
     }
 
     pub fn look_x(&self) -> f32 {
@@ -210,7 +210,7 @@ impl System for ActorSystem {
 
             actor.grounded = chunk
                 .get_block_collision(
-                    actor.position - cgmath::Vector3::new(0.0, GROUNDED_DISTANCE, 0.0),
+                    actor.position - cgmath::vec3(0.0, GROUNDED_DISTANCE, 0.0),
                     actor.size,
                 )
                 .is_some();

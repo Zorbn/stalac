@@ -4,7 +4,7 @@ use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
 
 use crate::{
-    chunk::Chunk,
+    chunk::{Chunk, BLOCK_SIZE, BLOCK_SIZE_F},
     gfx::{camera::Camera, gui::Gui},
     input::Input,
 };
@@ -63,6 +63,14 @@ impl System for PlayerMovementSystem {
                 dir_x -= 1.0;
             }
 
+            if input.was_key_pressed(VirtualKeyCode::F) {
+                let start = actor.position() / BLOCK_SIZE_F;
+                let dir = Camera::get_direction_vec(actor.look_y());
+                if let Some(hit) = chunk.raycast(start, dir, 10.0) {
+                    chunk.set_block(false, hit.position.x, hit.position.y, hit.position.z);
+                }
+            }
+
             if actor.grounded() && input.is_key_held(VirtualKeyCode::Space) {
                 actor.jump();
             }
@@ -79,14 +87,14 @@ impl System for PlayerMovementSystem {
 
             actor.step(
                 *entity,
-                cgmath::Vector3::new(dir.x, 0.0, 0.0),
+                cgmath::vec3(dir.x, 0.0, 0.0),
                 actor.speed() * delta_time,
                 chunk,
                 no_clip,
             );
             actor.step(
                 *entity,
-                cgmath::Vector3::new(0.0, 0.0, dir.z),
+                cgmath::vec3(0.0, 0.0, dir.z),
                 actor.speed() * delta_time,
                 chunk,
                 no_clip,

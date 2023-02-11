@@ -72,7 +72,7 @@ impl Camera {
     }
 
     pub fn get_direction_vec(direction: f32) -> cgmath::Vector3<f32> {
-        cgmath::Vector3::new(
+        cgmath::vec3(
             direction.to_radians().sin(),
             0.0,
             direction.to_radians().cos(),
@@ -149,8 +149,8 @@ impl CameraPerspectiveProjection {
 
 impl CameraProjection for CameraPerspectiveProjection {
     fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let eye_point = cgmath::Point3::new(self.eye.x, self.eye.y, self.eye.z);
-        let target_point = cgmath::Point3::new(
+        let eye_point = cgmath::point3(self.eye.x, self.eye.y, self.eye.z);
+        let target_point = cgmath::point3(
             self.eye.x + self.look.x,
             self.eye.y + self.look.y,
             self.eye.z + self.look.z,
@@ -211,8 +211,8 @@ impl CameraOrthographicProjection {
 
 impl CameraProjection for CameraOrthographicProjection {
     fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let eye_point = cgmath::Point3::new(0.0, 0.0, 1.0);
-        let target_point = cgmath::Point3::new(0.0, 0.0, 0.0);
+        let eye_point = cgmath::point3(0.0, 0.0, 1.0);
+        let target_point = cgmath::point3(0.0, 0.0, 0.0);
         let view = cgmath::Matrix4::look_at_rh(eye_point, target_point, cgmath::Vector3::unit_y());
 
         cgmath::ortho(

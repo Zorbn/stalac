@@ -130,7 +130,7 @@ pub fn reconstruct_path(
 
     while current != start {
         path.push(
-            (current.cast::<f32>().unwrap() + cgmath::Vector3::new(0.5, 0.5, 0.5)) * BLOCK_SIZE_F,
+            (current.cast::<f32>().unwrap() + cgmath::vec3(0.5, 0.5, 0.5)) * BLOCK_SIZE_F,
         );
         current = came_from[&current];
     }
