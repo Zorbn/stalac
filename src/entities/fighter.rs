@@ -3,9 +3,9 @@ use std::{
     collections::HashSet,
 };
 
-use crate::ecs::actor::Actor;
+use crate::gfx::gui::Gui;
 
-use super::{ecs::System, health::Health};
+use super::{actor::Actor, ecs::System, health::Health};
 
 pub struct Fighter {
     attack_damage: i32,
@@ -55,12 +55,12 @@ impl System for FighterSystem {
         entity_cache: &mut Vec<usize>,
         chunk: &mut crate::chunk::Chunk,
         _input: &mut crate::input::Input,
-        _player: usize,
+        _gui: &mut Gui,
         delta_time: f32,
     ) {
         ecs.get_entities_with_both::<Fighter, Actor>(entity_cache);
 
-        if entity_cache.len() == 0 {
+        if entity_cache.is_empty() {
             return;
         }
 
@@ -81,8 +81,6 @@ impl System for FighterSystem {
 
             let position = actor.position();
             let size = actor.size();
-
-            drop(actor);
 
             for nearby_entity in &self.nearby_entities {
                 if nearby_entity == entity {

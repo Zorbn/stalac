@@ -105,14 +105,14 @@ impl Input {
 
     fn set_locked_cursor(window: &Window, is_locked: bool) -> bool {
         if is_locked {
-            if let Err(_) = window.set_cursor_grab(CursorGrabMode::Locked) {
+            if window.set_cursor_grab(CursorGrabMode::Locked).is_err() {
                 _ = window.set_cursor_grab(CursorGrabMode::Confined);
             }
         } else {
             _ = window.set_cursor_grab(CursorGrabMode::None);
         }
 
-        _ = window.set_cursor_visible(!is_locked);
+        window.set_cursor_visible(!is_locked);
 
         is_locked
     }

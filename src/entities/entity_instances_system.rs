@@ -1,12 +1,17 @@
 use std::borrow::BorrowMut;
 
-use crate::{chunk::Chunk, gfx::instance::Instance, input::Input};
+use crate::{
+    chunk::Chunk,
+    gfx::{gui::Gui, instance::Instance},
+    input::Input,
+};
 use cgmath::prelude::*;
 
 use super::{
     actor::Actor,
     display::Display,
     ecs::{EntityManager, System},
+    player::Player,
 };
 
 pub struct EntityInstancesSystem {
@@ -32,10 +37,17 @@ impl System for EntityInstancesSystem {
         entity_cache: &mut Vec<usize>,
         _chunk: &mut Chunk,
         _input: &mut Input,
-        player: usize,
+        _gui: &mut Gui,
         _delta_time: f32,
     ) {
         self.entity_instances.clear();
+
+        ecs.get_entities_with_both::<Player, Actor>(entity_cache);
+
+        let player = match entity_cache.first() {
+            Some(p) => *p,
+            None => return,
+        };
 
         let player_position = ecs
             .borrow_components::<Actor>()
@@ -47,7 +59,7 @@ impl System for EntityInstancesSystem {
 
         ecs.get_entities_with_both::<Display, Actor>(entity_cache);
 
-        if entity_cache.len() == 0 {
+        if entity_cache.is_empty() {
             return;
         }
 

@@ -4,12 +4,14 @@ use std::{borrow::BorrowMut, collections::HashMap};
 use crate::{
     a_star::{a_star_search, reconstruct_path},
     chunk::Chunk,
+    gfx::gui::Gui,
     input::Input,
 };
 
 use super::{
     actor::Actor,
     ecs::{EntityManager, System},
+    player::Player,
 };
 
 const REPATH_TIME: f32 = 1.0;
@@ -41,9 +43,16 @@ impl System for ChaseAiSystem {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         _input: &mut Input,
-        player: usize,
+        _gui: &mut Gui,
         delta_time: f32,
     ) {
+        ecs.get_entities_with_both::<Player, Actor>(entity_cache);
+
+        let player = match entity_cache.first() {
+            Some(p) => *p,
+            None => return,
+        };
+
         let player_position = ecs
             .borrow_components::<Actor>()
             .unwrap()
@@ -54,7 +63,7 @@ impl System for ChaseAiSystem {
 
         ecs.get_entities_with_both::<ChaseAi, Actor>(entity_cache);
 
-        if entity_cache.len() == 0 {
+        if entity_cache.is_empty() {
             return;
         }
 

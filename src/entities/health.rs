@@ -9,7 +9,9 @@ impl Health {
 
     pub fn take_damage(&mut self, amount: i32) {
         self.amount -= amount;
+    }
 
-        println!("health: {}", self.amount);
+    pub fn amount(&self) -> i32 {
+        self.amount
     }
 }

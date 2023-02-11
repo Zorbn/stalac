@@ -1,12 +1,13 @@
 use crate::chunk::Chunk;
-use crate::ecs::actor::{Actor, ActorSystem};
-use crate::ecs::chase_ai::{ChaseAi, ChaseAiSystem};
-use crate::ecs::display::Display;
-use crate::ecs::ecs::{EntityManager, SystemManager};
-use crate::ecs::entity_instances_system::EntityInstancesSystem;
-use crate::ecs::fighter::{Fighter, FighterSystem};
-use crate::ecs::health::Health;
-use crate::ecs::player::{Player, PlayerMovementSystem};
+use crate::entities::actor::{Actor, ActorSystem};
+use crate::entities::chase_ai::{ChaseAi, ChaseAiSystem};
+use crate::entities::display::Display;
+use crate::entities::ecs::{EntityManager, SystemManager};
+use crate::entities::entity_instances_system::EntityInstancesSystem;
+use crate::entities::fighter::{Fighter, FighterSystem};
+use crate::entities::health::Health;
+use crate::entities::health_display::{HealthDisplay, HealthDisplaySystem};
+use crate::entities::player::{Player, PlayerMovementSystem};
 use crate::gfx::camera::{Camera, CameraOrthographicProjection, CameraPerspectiveProjection};
 use crate::gfx::gui::Gui;
 use crate::gfx::instance::InstanceRaw;
@@ -92,8 +93,7 @@ impl State {
             .formats
             .iter()
             .copied()
-            .filter(|f| f.describe().srgb)
-            .next()
+            .find(|f| f.describe().srgb)
             .unwrap_or(surface_capabilities.formats[0]);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -149,7 +149,7 @@ impl State {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    &texture_array.bind_group_layout(),
+                    texture_array.bind_group_layout(),
                     camera.bind_group_layout(),
                 ],
                 push_constant_ranges: &[],
@@ -203,7 +203,7 @@ impl State {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    &ui_texture_array.bind_group_layout(),
+                    ui_texture_array.bind_group_layout(),
                     camera.bind_group_layout(),
                 ],
                 push_constant_ranges: &[],
@@ -282,6 +282,7 @@ impl State {
         ecs.add_component_to_entity(player, player_actor);
         ecs.add_component_to_entity(player, Player {});
         ecs.add_component_to_entity(player, Health::new(100));
+        ecs.add_component_to_entity(player, HealthDisplay {});
         let enemy = ecs.add_entity();
         ecs.add_component_to_entity(enemy, enemy_actor);
         ecs.add_component_to_entity(enemy, ChaseAi::new());
@@ -294,6 +295,7 @@ impl State {
         systems.add_system(PlayerMovementSystem {});
         systems.add_system(EntityInstancesSystem::new());
         systems.add_system(FighterSystem::new());
+        systems.add_system(HealthDisplaySystem {});
 
         let entity_cache = Vec::new();
         let gui = Gui::new();
@@ -395,12 +397,14 @@ impl State {
             }
         }
 
+        self.gui.clear();
+
         self.systems.update(
             &mut self.ecs,
             &mut self.entity_cache,
             &mut self.chunk,
             &mut self.input,
-            self.player,
+            &mut self.gui,
             delta_time,
         );
 
@@ -450,7 +454,7 @@ impl State {
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view(),
+                    view: self.depth_texture.view(),
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: true,
@@ -504,7 +508,7 @@ impl State {
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view(),
+                    view: self.depth_texture.view(),
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: true,
@@ -516,9 +520,6 @@ impl State {
             render_pass.set_pipeline(&self.ui_render_pipeline);
             render_pass.set_bind_group(0, self.ui_texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.ui_camera.bind_group(), &[]);
-
-            self.gui.clear();
-            self.gui.write("Health: 100% Damage: 50% Money: $20");
 
             self.ui_model
                 .update_instances(&self.device, self.gui.instances());

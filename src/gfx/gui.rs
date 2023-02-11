@@ -9,6 +9,7 @@ const CHARACTERS: &str = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTU
 pub struct Gui {
     characters: HashMap<char, u32>,
     glyph_instances: Vec<Instance>,
+    write_line: f32,
 }
 
 impl Gui {
@@ -21,23 +22,31 @@ impl Gui {
         Self {
             characters,
             glyph_instances: Vec::new(),
+            write_line: 0.0,
         }
     }
 
     pub fn clear(&mut self) {
         self.glyph_instances.clear();
+        self.write_line = 0.0;
     }
 
     pub fn write(&mut self, text: &str) {
         for (i, char) in text.chars().enumerate() {
             if let Some(char_index) = self.characters.get(&char) {
                 self.glyph_instances.push(Instance {
-                    position: cgmath::Vector3::new(i as f32 * UI_SPRITE_WIDTH, 0.0, 0.0),
+                    position: cgmath::Vector3::new(
+                        i as f32 * UI_SPRITE_WIDTH,
+                        self.write_line,
+                        0.0,
+                    ),
                     rotation: cgmath::Quaternion::zero(),
                     tex_index: *char_index,
                 })
             }
         }
+
+        self.write_line += 1.0;
     }
 
     pub fn instances(&self) -> &Vec<Instance> {

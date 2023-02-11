@@ -38,10 +38,10 @@ impl TextureArray {
 
         let mut texture_views = Vec::new();
         let mut texture_samplers = Vec::new();
-        for i in 0..textures.len() {
+        (0..textures.len()).for_each(|i| {
             texture_views.push(textures[i].view());
             texture_samplers.push(textures[i].sampler());
-        }
+        });
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,

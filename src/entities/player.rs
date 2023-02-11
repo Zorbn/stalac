@@ -3,7 +3,11 @@ use std::borrow::BorrowMut;
 use cgmath::prelude::*;
 use winit::event::VirtualKeyCode;
 
-use crate::{chunk::Chunk, gfx::camera::Camera, input::Input};
+use crate::{
+    chunk::Chunk,
+    gfx::{camera::Camera, gui::Gui},
+    input::Input,
+};
 
 use super::{
     actor::Actor,
@@ -23,12 +27,12 @@ impl System for PlayerMovementSystem {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         input: &mut Input,
-        _player: usize,
+        _gui: &mut Gui,
         delta_time: f32,
     ) {
         ecs.get_entities_with_both::<Player, Actor>(entity_cache);
 
-        if entity_cache.len() == 0 {
+        if entity_cache.is_empty() {
             return;
         }
 

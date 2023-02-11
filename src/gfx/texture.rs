@@ -65,7 +65,7 @@ impl Texture {
     ) -> Result<Self, io::Error> {
         let full_path = format!("res/{}", res_path);
         let bytes = std::fs::read(full_path)?;
-        Self::from_bytes(&device, &queue, &bytes, res_path)
+        Self::from_bytes(device, queue, &bytes, res_path)
     }
 
     pub fn from_bytes(

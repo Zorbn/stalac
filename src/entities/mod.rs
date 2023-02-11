@@ -5,4 +5,5 @@ pub mod ecs;
 pub mod entity_instances_system;
 pub mod fighter;
 pub mod health;
+pub mod health_display;
 pub mod player;

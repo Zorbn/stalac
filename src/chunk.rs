@@ -116,7 +116,7 @@ impl Chunk {
 
         if let Some(model) = &mut self.model {
             model.update_instances(
-                &device,
+                device,
                 &vec![Instance {
                     position: cgmath::Vector3 {
                         x: 0.0,

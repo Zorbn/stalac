@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
 };
 
-use crate::{chunk::Chunk, input::Input};
+use crate::{chunk::Chunk, gfx::gui::Gui, input::Input};
 
 pub struct EntityManager {
     entities_count: usize,
@@ -149,7 +149,7 @@ impl<T> ComponentStore<T> {
 
     pub fn get(&self, entity: usize) -> Option<&T> {
         let index = self.entity_map.get(&entity).unwrap();
-        return self.components.get(*index);
+        self.components.get(*index)
     }
 
     pub fn get_all(&self) -> &Vec<T> {
@@ -158,7 +158,7 @@ impl<T> ComponentStore<T> {
 
     pub fn get_mut(&mut self, entity: usize) -> Option<&mut T> {
         let index = self.entity_map.get(&entity).unwrap();
-        return self.components.get_mut(*index);
+        self.components.get_mut(*index)
     }
 
     pub fn get_all_mut(&mut self) -> &mut Vec<T> {
@@ -207,11 +207,11 @@ impl SystemManager {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         input: &mut Input,
-        player: usize,
+        gui: &mut Gui,
         delta_time: f32,
     ) {
         for system_store in &mut self.system_stores {
-            system_store.update(ecs, entity_cache, chunk, input, player, delta_time);
+            system_store.update(ecs, entity_cache, chunk, input, gui, delta_time);
         }
     }
 
@@ -231,7 +231,11 @@ impl SystemManager {
 
     pub fn remove<T: 'static>(&mut self) {
         for (i, system_store) in self.system_stores.iter().enumerate() {
-            if let Some(_) = system_store.as_any().downcast_ref::<SystemStore<T>>() {
+            if system_store
+                .as_any()
+                .downcast_ref::<SystemStore<T>>()
+                .is_some()
+            {
                 self.system_stores.remove(i);
                 return;
             }
@@ -246,7 +250,7 @@ pub trait System {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         input: &mut Input,
-        player: usize,
+        gui: &mut Gui,
         delta_time: f32,
     );
 }
@@ -260,7 +264,7 @@ pub trait AnySystemStore {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         input: &mut Input,
-        player: usize,
+        gui: &mut Gui,
         delta_time: f32,
     );
 }
@@ -286,10 +290,10 @@ impl<T: 'static + System> AnySystemStore for SystemStore<T> {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         input: &mut Input,
-        player: usize,
+        gui: &mut Gui,
         delta_time: f32,
     ) {
         self.system
-            .update(ecs, entity_cache, chunk, input, player, delta_time);
+            .update(ecs, entity_cache, chunk, input, gui, delta_time);
     }
 }

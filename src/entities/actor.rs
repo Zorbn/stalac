@@ -2,6 +2,7 @@ use std::{borrow::BorrowMut, collections::HashSet};
 
 use crate::{
     chunk::{Chunk, BLOCK_SIZE},
+    gfx::gui::Gui,
     input::Input,
 };
 
@@ -190,12 +191,12 @@ impl System for ActorSystem {
         entity_cache: &mut Vec<usize>,
         chunk: &mut Chunk,
         _input: &mut Input,
-        _player: usize,
+        _gui: &mut Gui,
         delta_time: f32,
     ) {
         ecs.get_entities_with::<Actor>(entity_cache);
 
-        if entity_cache.len() == 0 {
+        if entity_cache.is_empty() {
             return;
         }
 

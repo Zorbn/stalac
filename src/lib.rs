@@ -2,7 +2,7 @@ mod a_star;
 mod bytes;
 mod chunk;
 mod direction;
-mod ecs;
+mod entities;
 mod gfx;
 mod input;
 mod rng;
@@ -66,7 +66,7 @@ pub async fn run() {
             DeviceEvent::MouseMotion { delta } => {
                 state.mouse_motion(delta.0 as f32, delta.1 as f32);
             }
-            _ => {}
+            _ => (),
         },
         Event::MainEventsCleared => {
             state.window().request_redraw();
