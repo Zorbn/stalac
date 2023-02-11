@@ -19,9 +19,7 @@ impl System for HealthDisplaySystem {
     ) {
         let Ecs { manager, entity_cache, .. } = ecs;
 
-        manager.get_entities_with_both::<Health, HealthDisplay>(entity_cache);
-
-        if entity_cache.is_empty() {
+        if !manager.get_entities_with_both::<Health, HealthDisplay>(entity_cache) {
             return;
         }
 

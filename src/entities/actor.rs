@@ -195,9 +195,7 @@ impl System for ActorSystem {
     ) {
         let Ecs { manager, entity_cache, .. } = ecs;
 
-        manager.get_entities_with::<Actor>(entity_cache);
-
-        if entity_cache.is_empty() {
+        if !manager.get_entities_with::<Actor>(entity_cache) {
             return;
         }
 

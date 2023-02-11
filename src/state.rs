@@ -5,7 +5,7 @@ use crate::entities::display::Display;
 use crate::entities::ecs::{EntityManager, SystemManager, Ecs, CommandQueue};
 use crate::entities::entity_instances_system::EntityInstancesSystem;
 use crate::entities::fighter::{Fighter, FighterSystem};
-use crate::entities::health::Health;
+use crate::entities::health::{Health, HealthSystem};
 use crate::entities::health_display::{HealthDisplay, HealthDisplaySystem};
 use crate::entities::player::{Player, PlayerMovementSystem};
 use crate::gfx::camera::{Camera, CameraOrthographicProjection, CameraPerspectiveProjection};
@@ -300,6 +300,7 @@ impl State {
         systems.add_system(EntityInstancesSystem::new());
         systems.add_system(FighterSystem::new());
         systems.add_system(HealthDisplaySystem {});
+        systems.add_system(HealthSystem {});
 
         let gui = Gui::new();
 

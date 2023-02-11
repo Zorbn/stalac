@@ -58,9 +58,7 @@ impl System for EntityInstancesSystem {
             .unwrap()
             .position();
 
-        manager.get_entities_with_both::<Display, Actor>(entity_cache);
-
-        if entity_cache.is_empty() {
+        if !manager.get_entities_with_both::<Display, Actor>(entity_cache) {
             return;
         }
 

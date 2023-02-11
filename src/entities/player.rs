@@ -31,9 +31,7 @@ impl System for PlayerMovementSystem {
     ) {
         let Ecs { manager, entity_cache, .. } = ecs;
 
-        manager.get_entities_with_both::<Player, Actor>(entity_cache);
-
-        if entity_cache.is_empty() {
+        if !manager.get_entities_with_both::<Player, Actor>(entity_cache) {
             return;
         }
 

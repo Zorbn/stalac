@@ -113,7 +113,7 @@ impl EntityManager {
         None
     }
 
-    pub fn get_entities_with<T: 'static>(&self, entities: &mut Vec<usize>) {
+    pub fn get_entities_with<T: 'static>(&self, entities: &mut Vec<usize>) -> bool {
         let store = self.borrow_components::<T>();
 
         entities.clear();
@@ -121,16 +121,18 @@ impl EntityManager {
         if let Some(store) = store {
             entities.extend(store.get_entities());
         }
+
+        !entities.is_empty()
     }
 
-    pub fn get_entities_with_both<T1: 'static, T2: 'static>(&self, entities: &mut Vec<usize>) {
+    pub fn get_entities_with_both<T1: 'static, T2: 'static>(&self, entities: &mut Vec<usize>) -> bool {
         let first_store = self.borrow_components::<T1>();
         let second_store = self.borrow_components::<T2>();
 
         entities.clear();
 
         if first_store.is_none() || second_store.is_none() {
-            return;
+            return false;
         }
 
         let first_store = first_store.unwrap();
@@ -141,6 +143,8 @@ impl EntityManager {
                 entities.push(*entity);
             }
         }
+
+        !entities.is_empty()
     }
 }
 

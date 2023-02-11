@@ -57,11 +57,9 @@ impl System for FighterSystem {
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        let Ecs { manager, entity_cache, queue } = ecs;
+        let Ecs { manager, entity_cache, .. } = ecs;
 
-        manager.get_entities_with_both::<Fighter, Actor>(entity_cache);
-
-        if entity_cache.is_empty() {
+        if !manager.get_entities_with_both::<Fighter, Actor>(entity_cache) {
             return;
         }
 
@@ -99,10 +97,6 @@ impl System for FighterSystem {
 
                 if let Some(health) = healths.get_mut(*nearby_entity) {
                     health.take_damage(fighter.get_attack());
-
-                    if health.amount() <= 0 {
-                        queue.remove_entity(*nearby_entity);
-                    }
                 }
             }
         }
