@@ -3,9 +3,9 @@ use std::{
     collections::HashSet,
 };
 
-use crate::gfx::gui::Gui;
+use crate::{gfx::gui::Gui, input::Input, chunk::Chunk};
 
-use super::{actor::Actor, ecs::System, health::Health};
+use super::{actor::Actor, ecs::{System, Ecs}, health::Health};
 
 pub struct Fighter {
     attack_damage: i32,
@@ -51,22 +51,23 @@ impl FighterSystem {
 impl System for FighterSystem {
     fn update(
         &mut self,
-        ecs: &mut super::ecs::EntityManager,
-        entity_cache: &mut Vec<usize>,
-        chunk: &mut crate::chunk::Chunk,
-        _input: &mut crate::input::Input,
+        ecs: &mut Ecs,
+        chunk: &mut Chunk,
+        _input: &mut Input,
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        ecs.get_entities_with_both::<Fighter, Actor>(entity_cache);
+        let Ecs { manager, entity_cache, queue } = ecs;
+
+        manager.get_entities_with_both::<Fighter, Actor>(entity_cache);
 
         if entity_cache.is_empty() {
             return;
         }
 
-        let mut actors = ecs.borrow_components::<Actor>().unwrap();
-        let mut fighters = ecs.borrow_components::<Fighter>().unwrap();
-        let mut healths = match ecs.borrow_components::<Health>() {
+        let mut actors = manager.borrow_components::<Actor>().unwrap();
+        let mut fighters = manager.borrow_components::<Fighter>().unwrap();
+        let mut healths = match manager.borrow_components::<Health>() {
             Some(h) => h,
             None => return,
         };
@@ -87,13 +88,21 @@ impl System for FighterSystem {
                     continue;
                 }
 
-                let nearby_actor = actors.borrow().get(*nearby_entity).unwrap();
+                let nearby_actor = match actors.borrow().get(*nearby_entity) {
+                    Some(a) => a,
+                    None => continue,
+                };
+
                 if !nearby_actor.intersects(position, size) {
                     continue;
                 }
 
                 if let Some(health) = healths.get_mut(*nearby_entity) {
                     health.take_damage(fighter.get_attack());
+
+                    if health.amount() <= 0 {
+                        queue.remove_entity(*nearby_entity);
+                    }
                 }
             }
         }

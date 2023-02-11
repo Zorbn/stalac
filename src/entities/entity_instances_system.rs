@@ -10,7 +10,7 @@ use cgmath::prelude::*;
 use super::{
     actor::Actor,
     display::Display,
-    ecs::{EntityManager, System},
+    ecs::{System, Ecs},
     player::Player,
 };
 
@@ -33,23 +33,24 @@ impl EntityInstancesSystem {
 impl System for EntityInstancesSystem {
     fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         _chunk: &mut Chunk,
         _input: &mut Input,
         _gui: &mut Gui,
         _delta_time: f32,
     ) {
-        self.entity_instances.clear();
+        let Ecs { manager, entity_cache, .. } = ecs;
 
-        ecs.get_entities_with_both::<Player, Actor>(entity_cache);
+        manager.get_entities_with_both::<Player, Actor>(entity_cache);
 
         let player = match entity_cache.first() {
             Some(p) => *p,
             None => return,
         };
 
-        let player_position = ecs
+        self.entity_instances.clear();
+
+        let player_position = manager
             .borrow_components::<Actor>()
             .unwrap()
             .borrow_mut()
@@ -57,14 +58,14 @@ impl System for EntityInstancesSystem {
             .unwrap()
             .position();
 
-        ecs.get_entities_with_both::<Display, Actor>(entity_cache);
+        manager.get_entities_with_both::<Display, Actor>(entity_cache);
 
         if entity_cache.is_empty() {
             return;
         }
 
-        let mut displays = ecs.borrow_components::<Display>().unwrap();
-        let mut actors = ecs.borrow_components::<Actor>().unwrap();
+        let mut displays = manager.borrow_components::<Display>().unwrap();
+        let mut actors = manager.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {
             let display = displays.borrow_mut().get(*entity).unwrap();

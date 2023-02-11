@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     actor::Actor,
-    ecs::{EntityManager, System},
+    ecs::{System, Ecs},
 };
 
 const MOUSE_SENSITIVITY: f32 = 0.1;
@@ -23,20 +23,21 @@ pub struct PlayerMovementSystem {}
 impl System for PlayerMovementSystem {
     fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         chunk: &mut Chunk,
         input: &mut Input,
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        ecs.get_entities_with_both::<Player, Actor>(entity_cache);
+        let Ecs { manager, entity_cache, .. } = ecs;
+
+        manager.get_entities_with_both::<Player, Actor>(entity_cache);
 
         if entity_cache.is_empty() {
             return;
         }
 
-        let mut actors = ecs.borrow_components::<Actor>().unwrap();
+        let mut actors = manager.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {
             let actor = actors.borrow_mut().get_mut(*entity).unwrap();

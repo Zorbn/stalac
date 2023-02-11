@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     actor::Actor,
-    ecs::{EntityManager, System},
+    ecs::{System, Ecs},
     player::Player,
 };
 
@@ -39,21 +39,22 @@ impl System for ChaseAiSystem {
     // until they are touching (within a constant distance, maybe 1m)
     fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         chunk: &mut Chunk,
         _input: &mut Input,
         _gui: &mut Gui,
         delta_time: f32,
     ) {
-        ecs.get_entities_with_both::<Player, Actor>(entity_cache);
+        let Ecs { manager, entity_cache, .. } = ecs;
+
+        manager.get_entities_with_both::<Player, Actor>(entity_cache);
 
         let player = match entity_cache.first() {
             Some(p) => *p,
             None => return,
         };
 
-        let player_position = ecs
+        let player_position = manager
             .borrow_components::<Actor>()
             .unwrap()
             .borrow_mut()
@@ -61,14 +62,14 @@ impl System for ChaseAiSystem {
             .unwrap()
             .position();
 
-        ecs.get_entities_with_both::<ChaseAi, Actor>(entity_cache);
+        manager.get_entities_with_both::<ChaseAi, Actor>(entity_cache);
 
         if entity_cache.is_empty() {
             return;
         }
 
-        let mut ais = ecs.borrow_components::<ChaseAi>().unwrap();
-        let mut actors = ecs.borrow_components::<Actor>().unwrap();
+        let mut ais = manager.borrow_components::<ChaseAi>().unwrap();
+        let mut actors = manager.borrow_components::<Actor>().unwrap();
 
         for entity in entity_cache {
             let ai = ais.borrow_mut().get_mut(*entity).unwrap();

@@ -22,7 +22,7 @@ pub struct Camera {
 impl Camera {
     pub fn new(device: &wgpu::Device, projection: Box<dyn CameraProjection>) -> Self {
         let mut uniform = CameraUniform::new();
-        uniform.update_view_proj(&projection);
+        uniform.update_view_proj(projection.as_ref());
 
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
@@ -67,7 +67,7 @@ impl Camera {
     }
 
     pub fn update(&mut self, queue: &wgpu::Queue) {
-        self.uniform.update_view_proj(&self.projection);
+        self.uniform.update_view_proj(self.projection.as_ref());
         queue.write_buffer(&self.buffer, 0, to_bytes(&[self.uniform]));
     }
 
@@ -252,7 +252,7 @@ impl CameraUniform {
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Box<dyn CameraProjection>) {
-        self.view_proj = (OPENGL_TO_WGPU_MATRIX * camera.build_view_projection_matrix()).into();
+    pub fn update_view_proj(&mut self, projection: &dyn CameraProjection) {
+        self.view_proj = (OPENGL_TO_WGPU_MATRIX * projection.build_view_projection_matrix()).into();
     }
 }

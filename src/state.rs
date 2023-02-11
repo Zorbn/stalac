@@ -2,7 +2,7 @@ use crate::chunk::Chunk;
 use crate::entities::actor::{Actor, ActorSystem};
 use crate::entities::chase_ai::{ChaseAi, ChaseAiSystem};
 use crate::entities::display::Display;
-use crate::entities::ecs::{EntityManager, SystemManager};
+use crate::entities::ecs::{EntityManager, SystemManager, Ecs, CommandQueue};
 use crate::entities::entity_instances_system::EntityInstancesSystem;
 use crate::entities::fighter::{Fighter, FighterSystem};
 use crate::entities::health::Health;
@@ -50,10 +50,9 @@ pub struct State {
     model: Model,
     ui_model: Model,
     chunk: Chunk,
-    ecs: EntityManager,
+    ecs: Ecs,
     systems: SystemManager,
     player: usize,
-    entity_cache: Vec<usize>,
     gui: Gui,
 }
 
@@ -265,6 +264,12 @@ impl State {
         chunk.generate_blocks(&mut rng);
         chunk.generate_mesh(&device);
 
+        let mut ecs = Ecs {
+            manager: EntityManager::new(),
+            queue: CommandQueue::new(),
+            entity_cache: Vec::new(),
+        };
+
         let mut player_actor = Actor::new(cgmath::Vector3::zero(), HUMANOID_SIZE, 6.0);
 
         if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
@@ -277,17 +282,16 @@ impl State {
             enemy_actor.teleport(enemy_spawn);
         }
 
-        let mut ecs = EntityManager::new();
-        let player = ecs.add_entity();
-        ecs.add_component_to_entity(player, player_actor);
-        ecs.add_component_to_entity(player, Player {});
-        ecs.add_component_to_entity(player, Health::new(100));
-        ecs.add_component_to_entity(player, HealthDisplay {});
-        let enemy = ecs.add_entity();
-        ecs.add_component_to_entity(enemy, enemy_actor);
-        ecs.add_component_to_entity(enemy, ChaseAi::new());
-        ecs.add_component_to_entity(enemy, Display::new(1));
-        ecs.add_component_to_entity(enemy, Fighter::new(10, 0.5));
+        let player = ecs.manager.add_entity();
+        ecs.manager.add_component_to_entity(player, player_actor);
+        ecs.manager.add_component_to_entity(player, Player {});
+        ecs.manager.add_component_to_entity(player, Health::new(100));
+        ecs.manager.add_component_to_entity(player, HealthDisplay {});
+        let enemy = ecs.manager.add_entity();
+        ecs.manager.add_component_to_entity(enemy, enemy_actor);
+        ecs.manager.add_component_to_entity(enemy, ChaseAi::new());
+        ecs.manager.add_component_to_entity(enemy, Display::new(1));
+        ecs.manager.add_component_to_entity(enemy, Fighter::new(10, 0.5));
 
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});
@@ -297,7 +301,6 @@ impl State {
         systems.add_system(FighterSystem::new());
         systems.add_system(HealthDisplaySystem {});
 
-        let entity_cache = Vec::new();
         let gui = Gui::new();
 
         Self {
@@ -321,7 +324,6 @@ impl State {
             ecs,
             systems,
             player,
-            entity_cache,
             gui,
         }
     }
@@ -398,10 +400,10 @@ impl State {
         }
 
         self.gui.clear();
+        self.ecs.flush_queue();
 
         self.systems.update(
             &mut self.ecs,
-            &mut self.entity_cache,
             &mut self.chunk,
             &mut self.input,
             &mut self.gui,
@@ -410,6 +412,7 @@ impl State {
 
         if let Some(player) = self
             .ecs
+            .manager
             .borrow_components::<Actor>()
             .unwrap()
             .borrow_mut()

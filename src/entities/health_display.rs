@@ -1,6 +1,8 @@
 use std::borrow::Borrow;
 
-use super::{ecs::System, health::Health};
+use crate::{gfx::gui::Gui, input::Input, chunk::Chunk};
+
+use super::{ecs::{System, Ecs}, health::Health};
 
 pub struct HealthDisplay {}
 
@@ -9,20 +11,21 @@ pub struct HealthDisplaySystem {}
 impl System for HealthDisplaySystem {
     fn update(
         &mut self,
-        ecs: &mut super::ecs::EntityManager,
-        entity_cache: &mut Vec<usize>,
-        _chunk: &mut crate::chunk::Chunk,
-        _input: &mut crate::input::Input,
-        gui: &mut crate::gfx::gui::Gui,
+        ecs: &mut Ecs,
+        _chunk: &mut Chunk,
+        _input: &mut Input,
+        gui: &mut Gui,
         _delta_time: f32,
     ) {
-        ecs.get_entities_with_both::<Health, HealthDisplay>(entity_cache);
+        let Ecs { manager, entity_cache, .. } = ecs;
+
+        manager.get_entities_with_both::<Health, HealthDisplay>(entity_cache);
 
         if entity_cache.is_empty() {
             return;
         }
 
-        let healths = ecs.borrow_components::<Health>().unwrap();
+        let healths = manager.borrow_components::<Health>().unwrap();
 
         for entity in entity_cache {
             let health = healths.borrow().get(*entity).unwrap();

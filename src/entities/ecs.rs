@@ -5,6 +5,46 @@ use std::{
 
 use crate::{chunk::Chunk, gfx::gui::Gui, input::Input};
 
+pub struct Ecs {
+    pub manager: EntityManager,
+    pub queue: CommandQueue,
+    pub entity_cache: Vec<usize>,
+}
+
+impl Ecs {
+    pub fn flush_queue(&mut self) {
+        for entity in self.queue.entities_to_remove() {
+            self.manager.remove_entity(*entity);
+        }
+
+        self.queue.clear();
+    }
+}
+
+pub struct CommandQueue {
+    entities_to_remove: Vec<usize>,
+}
+
+impl CommandQueue {
+    pub fn new() -> Self {
+        Self {
+            entities_to_remove: Vec::new(),
+        }
+    }
+
+    pub fn remove_entity(&mut self, entity: usize) {
+        self.entities_to_remove.push(entity);
+    }
+
+    pub fn clear(&mut self) {
+        self.entities_to_remove.clear();
+    }
+
+    pub fn entities_to_remove(&self) -> &Vec<usize> {
+        &self.entities_to_remove
+    }
+}
+
 pub struct EntityManager {
     entities_count: usize,
     component_stores: Vec<Box<dyn AnyComponentStore>>,
@@ -24,7 +64,7 @@ impl EntityManager {
         entity
     }
 
-    pub fn remove_entity<T: 'static>(&mut self, entity: usize) {
+    pub fn remove_entity(&mut self, entity: usize) {
         for component_store in self.component_stores.iter_mut() {
             component_store.remove(entity);
         }
@@ -148,7 +188,10 @@ impl<T> ComponentStore<T> {
     }
 
     pub fn get(&self, entity: usize) -> Option<&T> {
-        let index = self.entity_map.get(&entity).unwrap();
+        let index = match self.entity_map.get(&entity) {
+            Some(i) => i,
+            None => return None,
+        };
         self.components.get(*index)
     }
 
@@ -157,7 +200,10 @@ impl<T> ComponentStore<T> {
     }
 
     pub fn get_mut(&mut self, entity: usize) -> Option<&mut T> {
-        let index = self.entity_map.get(&entity).unwrap();
+        let index = match self.entity_map.get(&entity) {
+            Some(i) => i,
+            None => return None,
+        };
         self.components.get_mut(*index)
     }
 
@@ -203,15 +249,14 @@ impl SystemManager {
 
     pub fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         chunk: &mut Chunk,
         input: &mut Input,
         gui: &mut Gui,
         delta_time: f32,
     ) {
         for system_store in &mut self.system_stores {
-            system_store.update(ecs, entity_cache, chunk, input, gui, delta_time);
+            system_store.update(ecs, chunk, input, gui, delta_time);
         }
     }
 
@@ -246,8 +291,7 @@ impl SystemManager {
 pub trait System {
     fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         chunk: &mut Chunk,
         input: &mut Input,
         gui: &mut Gui,
@@ -260,8 +304,7 @@ pub trait AnySystemStore {
 
     fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         chunk: &mut Chunk,
         input: &mut Input,
         gui: &mut Gui,
@@ -286,14 +329,13 @@ impl<T: 'static + System> AnySystemStore for SystemStore<T> {
 
     fn update(
         &mut self,
-        ecs: &mut EntityManager,
-        entity_cache: &mut Vec<usize>,
+        ecs: &mut Ecs,
         chunk: &mut Chunk,
         input: &mut Input,
         gui: &mut Gui,
         delta_time: f32,
     ) {
         self.system
-            .update(ecs, entity_cache, chunk, input, gui, delta_time);
+            .update(ecs, chunk, input, gui, delta_time);
     }
 }
