@@ -43,9 +43,6 @@ pub async fn run() {
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                 state.resize(**new_inner_size);
             }
-            WindowEvent::MouseInput { button, .. } => {
-                state.mouse_input(*button);
-            }
             _ => {}
         },
         Event::RedrawRequested(window_id) if window_id == state.window().id() => {

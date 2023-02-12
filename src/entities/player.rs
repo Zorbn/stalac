@@ -1,7 +1,7 @@
 use std::borrow::BorrowMut;
 
 use cgmath::prelude::*;
-use winit::event::VirtualKeyCode;
+use winit::event::{MouseButton, VirtualKeyCode};
 
 use crate::{
     chunk::{Chunk, BLOCK_SIZE, BLOCK_SIZE_F},
@@ -63,7 +63,7 @@ impl System for PlayerMovementSystem {
                 dir_x -= 1.0;
             }
 
-            if input.was_key_pressed(VirtualKeyCode::F) {
+            if input.was_mouse_button_pressed(MouseButton::Left) {
                 let start = actor.position() / BLOCK_SIZE_F;
                 let dir = Camera::get_direction_vec(actor.look_y());
                 if let Some(hit) = chunk.raycast(start, dir, 10.0) {

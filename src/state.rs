@@ -24,7 +24,7 @@ use std::iter::once;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
-use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
+use winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 use winit::window::{Fullscreen, Window};
 
 const Z_NEAR: f32 = 0.1;
@@ -371,22 +371,25 @@ impl State {
                 ..
             } => {
                 self.input.key_state_changed(*keycode, *state);
-                true
             }
-            _ => false,
+            WindowEvent::MouseInput { state, button, .. } => {
+                self.input.mouse_button_state_changed(*button, *state);
+            }
+            _ => return false,
         }
+
+        true
     }
 
     pub fn mouse_motion(&mut self, delta_x: f32, delta_y: f32) {
         self.input.mouse_moved(delta_x, delta_y);
     }
 
-    pub fn mouse_input(&mut self, button: MouseButton) {
-        self.input.mouse_state_changed(button);
-    }
-
     pub fn update(&mut self, delta_time: f32) {
-        if self.input.was_mouse_button_pressed(MouseButton::Left, true) {
+        if self
+            .input
+            .was_mouse_button_pressed_ignore_focus(MouseButton::Left)
+        {
             self.input.set_focused(&self.window, true);
         }
 
