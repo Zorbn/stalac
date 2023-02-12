@@ -7,6 +7,7 @@ mod gfx;
 mod input;
 mod rng;
 mod state;
+mod ray;
 
 use std::time::Instant;
 
