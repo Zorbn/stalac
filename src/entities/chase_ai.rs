@@ -102,8 +102,8 @@ impl System for ChaseAiSystem {
                     return;
                 }
 
-                let dir = cgmath::vec3(next_f.x - position.x, 0.0, next_f.z - position.z)
-                    .normalize();
+                let dir =
+                    cgmath::vec3(next_f.x - position.x, 0.0, next_f.z - position.z).normalize();
                 actor.step(*entity, dir, 4.0 * delta_time, chunk, true);
             } else {
                 ai.next = ai.path.pop();

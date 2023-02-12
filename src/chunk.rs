@@ -187,8 +187,8 @@ impl Chunk {
 
         let start = position - size * 0.5;
 
-        let steps = size.cast::<i32>().expect("Failed to calculate step count!")
-            + cgmath::vec3(1, 1, 1);
+        let steps =
+            size.cast::<i32>().expect("Failed to calculate step count!") + cgmath::vec3(1, 1, 1);
         let mut interp = cgmath::vec3(0.0, 0.0, 0.0);
 
         for x in 0..=steps.x {
@@ -212,7 +212,12 @@ impl Chunk {
         None
     }
 
-    pub fn raycast(&self, start: cgmath::Vector3<f32>, dir: cgmath::Vector3<f32>, range: f32) -> Option<RaycastHit> {
+    pub fn raycast(
+        &self,
+        start: cgmath::Vector3<f32>,
+        dir: cgmath::Vector3<f32>,
+        range: f32,
+    ) -> Option<RaycastHit> {
         let tile_dir = dir.map(|n| n.signum()).cast::<i32>().unwrap();
         let step = (1.0 / dir).map(|n| n.abs());
         let mut initial_step = cgmath::Vector3::zero();
@@ -221,19 +226,19 @@ impl Chunk {
             start.x.ceil() - start.x
         } else {
             start.x - start.x.floor()
-        }  * step.x;
+        } * step.x;
 
         initial_step.y = if dir.y > 0.0 {
             start.y.ceil() - start.y
         } else {
             start.y - start.y.floor()
-        }  * step.y;
+        } * step.y;
 
         initial_step.z = if dir.z > 0.0 {
             start.z.ceil() - start.z
         } else {
             start.z - start.z.floor()
-        }  * step.z;
+        } * step.z;
 
         let mut dist_to_next = initial_step;
         let mut block_pos = start.map(|n| n.floor()).cast::<i32>().unwrap();

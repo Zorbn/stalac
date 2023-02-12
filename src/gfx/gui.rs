@@ -35,11 +35,7 @@ impl Gui {
         for (i, char) in text.chars().enumerate() {
             if let Some(char_index) = self.characters.get(&char) {
                 self.glyph_instances.push(Instance {
-                    position: cgmath::vec3(
-                        i as f32 * UI_SPRITE_WIDTH,
-                        self.write_line,
-                        0.0,
-                    ),
+                    position: cgmath::vec3(i as f32 * UI_SPRITE_WIDTH, self.write_line, 0.0),
                     rotation: cgmath::Quaternion::zero(),
                     tex_index: *char_index,
                 })

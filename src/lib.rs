@@ -62,12 +62,10 @@ pub async fn run() {
                 Err(_) => {}
             }
         }
-        Event::DeviceEvent { event, .. } => match event {
-            DeviceEvent::MouseMotion { delta } => {
-                state.mouse_motion(delta.0 as f32, delta.1 as f32);
-            }
-            _ => (),
-        },
+        Event::DeviceEvent {
+            event: DeviceEvent::MouseMotion { delta: (x, y) },
+            ..
+        } => state.mouse_motion(x as f32, y as f32),
         Event::MainEventsCleared => {
             state.window().request_redraw();
         }
