@@ -43,35 +43,40 @@ impl Actor {
         chunk: &mut Chunk,
         no_clip: bool,
     ) -> bool {
-        let old_position = self.position;
-
         let velocity = dir * speed;
-        self.position += velocity;
+        let new_position = self.position + velocity;
 
-        if !no_clip
-            && chunk
-                .get_block_collision(self.position, self.size)
-                .is_some()
-        {
-            self.position = old_position;
+        if !no_clip && chunk.get_block_collision(new_position, self.size).is_some() {
             return false;
         }
 
-        // Since the actor has moved, it may be occupying new tiles, so the chunk must be updated.
+        self.update_occupied_blocks(entity, chunk, Some(new_position));
+        self.position = new_position;
+
+        true
+    }
+
+    pub fn update_occupied_blocks(
+        &self,
+        entity: usize,
+        chunk: &mut Chunk,
+        new_position: Option<cgmath::Vector3<f32>>,
+    ) {
         for i in 0..4 {
             let x_offset = (i % 2) * 2 - 1;
             let z_offset = (i / 2) * 2 - 1;
 
             let old_block_position =
-                self.get_corner_pos(old_position, x_offset, z_offset) / BLOCK_SIZE;
-            let new_block_position =
                 self.get_corner_pos(self.position, x_offset, z_offset) / BLOCK_SIZE;
 
             chunk.remove_entity_from_block(entity, old_block_position.x, old_block_position.z);
-            chunk.add_entity_to_block(entity, new_block_position.x, new_block_position.z);
-        }
 
-        true
+            if let Some(new_position) = new_position {
+                let new_block_position =
+                    self.get_corner_pos(new_position, x_offset, z_offset) / BLOCK_SIZE;
+                chunk.add_entity_to_block(entity, new_block_position.x, new_block_position.z);
+            }
+        }
     }
 
     pub fn get_nearby_entities(&mut self, chunk: &mut Chunk, nearby_entities: &mut HashSet<usize>) {

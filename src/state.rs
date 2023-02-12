@@ -24,13 +24,16 @@ use std::iter::once;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
+use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 use winit::window::{Fullscreen, Window};
 
 const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 100.0;
 const UI_SCALE: f32 = 28.0;
 const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::vec3(1.0, 0.8, 1.0);
+
+// TODO: This struct handles top-level gameplay (connecting input & entities & systems) but also does graphics.
+// maybe the rendering details should be factored out.
 
 pub struct State {
     window: Window,
@@ -299,7 +302,7 @@ impl State {
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});
         systems.add_system(ChaseAiSystem {});
-        systems.add_system(PlayerMovementSystem {});
+        systems.add_system(PlayerMovementSystem::new());
         systems.add_system(EntityInstancesSystem::new());
         systems.add_system(FighterSystem::new());
         systems.add_system(HealthDisplaySystem {});
@@ -407,7 +410,7 @@ impl State {
         }
 
         self.gui.clear();
-        self.ecs.flush_queue();
+        self.ecs.flush_queue(&mut self.chunk);
 
         self.systems.update(
             &mut self.ecs,

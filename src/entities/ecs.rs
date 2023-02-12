@@ -5,6 +5,8 @@ use std::{
 
 use crate::{chunk::Chunk, gfx::gui::Gui, input::Input};
 
+use super::actor::Actor;
+
 pub struct Ecs {
     pub manager: EntityManager,
     pub queue: CommandQueue,
@@ -12,7 +14,22 @@ pub struct Ecs {
 }
 
 impl Ecs {
-    pub fn flush_queue(&mut self) {
+    pub fn flush_queue(&mut self, chunk: &mut Chunk) {
+        let actors = match self.manager.borrow_components::<Actor>() {
+            Some(a) => a,
+            None => return,
+        };
+
+        for entity in self.queue.entities_to_remove() {
+            // Remove actor from the map.
+            actors
+                .get(*entity)
+                .unwrap()
+                .update_occupied_blocks(*entity, chunk, None);
+        }
+
+        drop(actors);
+
         for entity in self.queue.entities_to_remove() {
             self.manager.remove_entity(*entity);
         }

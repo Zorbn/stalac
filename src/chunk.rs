@@ -217,7 +217,12 @@ impl Chunk {
         start: cgmath::Vector3<f32>,
         dir: cgmath::Vector3<f32>,
         range: f32,
+        mut hit_entities: Option<&mut HashSet<usize>>,
     ) -> Option<RaycastHit> {
+        if let Some(ref mut hit_entities) = hit_entities {
+            hit_entities.clear();
+        }
+
         let tile_dir = dir.map(|n| n.signum()).cast::<i32>().unwrap();
         let step = (1.0 / dir).map(|n| n.abs());
         let mut initial_step = cgmath::Vector3::zero();
@@ -248,6 +253,14 @@ impl Chunk {
         let mut hit_block = self.get_block(block_pos.x, block_pos.y, block_pos.z);
         while !hit_block && last_dist_to_next < range {
             last_pos = block_pos;
+
+            if let Some(ref mut hit_entities) = hit_entities {
+                if let Some(entities_at_block) = self.entities_at_block(block_pos.x, block_pos.z) {
+                    for hit_entity in entities_at_block {
+                        hit_entities.insert(*hit_entity);
+                    }
+                }
+            }
 
             if dist_to_next.x < dist_to_next.y && dist_to_next.x < dist_to_next.z {
                 last_dist_to_next = dist_to_next.x;

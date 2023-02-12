@@ -1,10 +1,10 @@
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, collections::HashSet};
 
 use cgmath::prelude::*;
 use winit::event::{MouseButton, VirtualKeyCode};
 
 use crate::{
-    chunk::{Chunk, BLOCK_SIZE, BLOCK_SIZE_F},
+    chunk::{Chunk, BLOCK_SIZE_F},
     gfx::{camera::Camera, gui::Gui},
     input::Input,
 };
@@ -18,7 +18,15 @@ const MOUSE_SENSITIVITY: f32 = 0.1;
 
 pub struct Player {}
 
-pub struct PlayerMovementSystem {}
+pub struct PlayerMovementSystem {
+    hit_entities: HashSet<usize>,
+}
+
+impl PlayerMovementSystem {
+    pub fn new() -> Self {
+        Self { hit_entities: HashSet::new() }
+    }
+}
 
 impl System for PlayerMovementSystem {
     fn update(
@@ -66,8 +74,18 @@ impl System for PlayerMovementSystem {
             if input.was_mouse_button_pressed(MouseButton::Left) {
                 let start = actor.position() / BLOCK_SIZE_F;
                 let dir = Camera::get_direction_vec(actor.look_y());
-                if let Some(hit) = chunk.raycast(start, dir, 10.0) {
+
+                let hit = chunk.raycast(start, dir, 10.0, Some(&mut self.hit_entities));
+
+                if let Some(hit) = hit {
                     chunk.set_block(false, hit.position.x, hit.position.y, hit.position.z);
+                }
+
+                for hit_entity in self.hit_entities.iter() {
+                    if *entity == *hit_entity {
+                        continue;
+                    }
+                    println!("hit: {}", *hit_entity);
                 }
             }
 
