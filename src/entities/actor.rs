@@ -109,7 +109,7 @@ impl Actor {
 
     fn snap_to_floor(&mut self) {
         self.reset_y_velocity();
-        self.position.y = self.position.y.floor() + self.size.y * 0.5 + GROUNDED_DISTANCE;
+        self.position.y = self.position.y.floor() + self.size.y * 0.5;
     }
 
     fn reset_y_velocity(&mut self) {
@@ -220,12 +220,6 @@ impl System for ActorSystem {
                 )
                 .is_some();
 
-            // If the player is moving towards the ground while touching it, snap to the floor
-            // and prevent y_velocity from building up over time.
-            if actor.grounded && actor.y_velocity < 0.0 {
-                actor.snap_to_floor()
-            }
-
             actor.apply_gravity(delta_time);
 
             if !actor.step(
@@ -235,6 +229,12 @@ impl System for ActorSystem {
                 chunk,
                 false,
             ) {
+                // If the player is moving towards the ground while touching it, snap to the floor
+                // and prevent y_velocity from building up over time.
+                if actor.y_velocity < 0.0 {
+                    actor.snap_to_floor()
+                }
+
                 actor.reset_y_velocity();
             }
         }
