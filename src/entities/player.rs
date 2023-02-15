@@ -1,13 +1,12 @@
-use std::{borrow::BorrowMut, collections::HashSet};
+use std::borrow::BorrowMut;
 
 use cgmath::prelude::*;
-use winit::event::{MouseButton, VirtualKeyCode};
+use winit::event::VirtualKeyCode;
 
 use crate::{
-    chunk::{Chunk, BLOCK_SIZE_F},
+    chunk::Chunk,
     gfx::{camera::Camera, gui::Gui},
     input::Input,
-    ray::Ray,
 };
 
 use super::{
@@ -19,17 +18,9 @@ const MOUSE_SENSITIVITY: f32 = 0.1;
 
 pub struct Player {}
 
-pub struct PlayerMovementSystem {
-    hit_entities: HashSet<usize>,
-}
+pub struct PlayerMovementSystem {}
 
-impl PlayerMovementSystem {
-    pub fn new() -> Self {
-        Self {
-            hit_entities: HashSet::new(),
-        }
-    }
-}
+impl PlayerMovementSystem {}
 
 impl System for PlayerMovementSystem {
     fn update(

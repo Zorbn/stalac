@@ -74,7 +74,7 @@ impl Simulation {
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});
         systems.add_system(ChaseAiSystem {});
-        systems.add_system(PlayerMovementSystem::new());
+        systems.add_system(PlayerMovementSystem {});
         systems.add_system(EntityInstancesSystem::new());
         systems.add_system(FighterSystem::new());
         systems.add_system(HealthDisplaySystem {});
