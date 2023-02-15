@@ -133,11 +133,7 @@ impl FighterSystem {
             let start = position / BLOCK_SIZE_F;
             let dir = Camera::get_direction_vec(look_y);
 
-            let hit = chunk.raycast(start, dir, 10.0, Some(&mut self.nearby_entities));
-
-            if let Some(hit) = hit {
-                chunk.set_block(false, hit.position.x, hit.position.y, hit.position.z);
-            }
+            chunk.raycast(start, dir, 10.0, Some(&mut self.nearby_entities));
 
             for hit_entity in &self.nearby_entities {
                 if entity == *hit_entity {
