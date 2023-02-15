@@ -15,7 +15,8 @@ use crate::rng::Rng;
 use cgmath::prelude::*;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::vec3(1.0, 0.8, 1.0);
+const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::vec3(1.0, 1.0, 1.0);
+const ITEM_SIZE: cgmath::Vector3<f32> = cgmath::vec3(1.0, 1.0, 1.0);
 
 pub struct Simulation {
     pub chunk: Chunk,
@@ -70,6 +71,16 @@ impl Simulation {
         ecs.manager.add_component_to_entity(enemy, Health::new(50));
         ecs.manager
             .add_component_to_entity(enemy, Fighter::new(10, 0.5));
+
+        if let Some(item_spawn) = chunk.get_spawn_position(&mut rng) {
+            let test_item = ecs.manager.add_entity();
+            ecs.manager.add_component_to_entity(
+                test_item,
+                Actor::new(item_spawn, ITEM_SIZE, 0.0),
+            );
+            ecs.manager
+                .add_component_to_entity(test_item, Display::new(0));
+        }
 
         let mut systems = SystemManager::new();
         systems.add_system(ActorSystem {});

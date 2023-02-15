@@ -5,6 +5,7 @@ use crate::gfx::cube_mesh::{CUBE_INDICES, CUBE_VERTICES};
 use crate::gfx::instance::Instance;
 use crate::gfx::model::Model;
 use crate::gfx::vertex::Vertex;
+use crate::math::round_vec_to_i32;
 use crate::rng::Rng;
 use cgmath::prelude::*;
 
@@ -67,15 +68,15 @@ impl Chunk {
             }
         }
 
-        for z in 0..CHUNK_SIZE {
-            for x in 0..CHUNK_SIZE {
-                if rng.range(100) > 10 {
-                    continue;
-                }
+        // for z in 0..CHUNK_SIZE {
+        //     for x in 0..CHUNK_SIZE {
+        //         if rng.range(100) > 10 {
+        //             continue;
+        //         }
 
-                self.set_block(true, x as i32, 1, z as i32);
-            }
-        }
+        //         self.set_block(true, x as i32, 1, z as i32);
+        //     }
+        // }
     }
 
     pub fn update_mesh(&mut self, device: &wgpu::Device) {
@@ -187,8 +188,7 @@ impl Chunk {
 
         let start = position - size * 0.5;
 
-        let steps =
-            size.cast::<i32>().expect("Failed to calculate step count!") + cgmath::vec3(1, 1, 1);
+        let steps = round_vec_to_i32(size) + cgmath::vec3(1, 1, 1);
         let mut interp = cgmath::vec3(0.0, 0.0, 0.0);
 
         for x in 0..=steps.x {
@@ -198,9 +198,7 @@ impl Chunk {
                 for z in 0..=steps.z {
                     interp.z = start.z + z as f32 / steps.z as f32 * size.z;
 
-                    let interp_block = interp
-                        .cast::<i32>()
-                        .expect("Failed to calculate interp block!");
+                    let interp_block = round_vec_to_i32(interp);
 
                     if self.get_block(interp_block.x, interp_block.y, interp_block.z) {
                         return Some(interp_block);

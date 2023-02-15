@@ -5,6 +5,7 @@ mod direction;
 mod entities;
 mod gfx;
 mod input;
+mod math;
 mod ray;
 mod rng;
 mod simulation;
