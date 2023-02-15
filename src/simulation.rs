@@ -7,6 +7,9 @@ use crate::entities::entity_instances_system::EntityInstancesSystem;
 use crate::entities::fighter::{Fighter, FighterSystem};
 use crate::entities::health::{Health, HealthSystem};
 use crate::entities::health_display::{HealthDisplay, HealthDisplaySystem};
+use crate::entities::inventory::{InventorySystem, Inventory};
+use crate::entities::inventory_display::{InventoryDisplaySystem, InventoryDisplay};
+use crate::entities::item::Item;
 use crate::entities::player::{Player, PlayerMovementSystem};
 use crate::gfx::gui::Gui;
 use crate::gfx::instance::Instance;
@@ -64,6 +67,8 @@ impl Simulation {
             .add_component_to_entity(player, Health::new(100));
         ecs.manager
             .add_component_to_entity(player, HealthDisplay {});
+        ecs.manager.add_component_to_entity(player, Inventory::new());
+        ecs.manager.add_component_to_entity(player, InventoryDisplay {});
         let enemy = ecs.manager.add_entity();
         ecs.manager.add_component_to_entity(enemy, enemy_actor);
         ecs.manager.add_component_to_entity(enemy, ChaseAi::new());
@@ -72,14 +77,17 @@ impl Simulation {
         ecs.manager
             .add_component_to_entity(enemy, Fighter::new(10, 0.5));
 
-        if let Some(item_spawn) = chunk.get_spawn_position(&mut rng) {
-            let test_item = ecs.manager.add_entity();
-            ecs.manager.add_component_to_entity(
-                test_item,
-                Actor::new(item_spawn, ITEM_SIZE, 0.0),
-            );
-            ecs.manager
-                .add_component_to_entity(test_item, Display::new(0));
+        for _ in 0..10 {
+            if let Some(item_spawn) = chunk.get_spawn_position(&mut rng) {
+                let test_item = ecs.manager.add_entity();
+                ecs.manager.add_component_to_entity(
+                    test_item,
+                    Actor::new(item_spawn, ITEM_SIZE, 0.0),
+                );
+                ecs.manager
+                    .add_component_to_entity(test_item, Display::new(0));
+                ecs.manager.add_component_to_entity(test_item, Item {});
+            }
         }
 
         let mut systems = SystemManager::new();
@@ -90,6 +98,8 @@ impl Simulation {
         systems.add_system(FighterSystem::new());
         systems.add_system(HealthDisplaySystem {});
         systems.add_system(HealthSystem {});
+        systems.add_system(InventorySystem::new());
+        systems.add_system(InventoryDisplaySystem::new());
 
         let gui = Gui::new();
 

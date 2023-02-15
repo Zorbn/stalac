@@ -7,3 +7,6 @@ pub mod fighter;
 pub mod health;
 pub mod health_display;
 pub mod player;
+pub mod inventory;
+pub mod inventory_display;
+pub mod item;

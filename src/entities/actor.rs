@@ -79,7 +79,7 @@ impl Actor {
         }
     }
 
-    pub fn get_nearby_entities(&mut self, chunk: &mut Chunk, nearby_entities: &mut HashSet<usize>) {
+    pub fn get_nearby_entities(&self, chunk: &mut Chunk, nearby_entities: &mut HashSet<usize>) {
         nearby_entities.clear();
 
         for i in 0..4 {
