@@ -5,9 +5,9 @@ mod direction;
 mod entities;
 mod gfx;
 mod input;
+mod ray;
 mod rng;
 mod state;
-mod ray;
 
 use std::time::Instant;
 

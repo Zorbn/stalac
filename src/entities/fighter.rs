@@ -1,14 +1,23 @@
 use std::{
     borrow::{Borrow, BorrowMut},
+    cell::RefMut,
     collections::HashSet,
 };
 
-use crate::{chunk::Chunk, gfx::gui::Gui, input::Input};
+use winit::event::MouseButton;
+
+use crate::{
+    chunk::{Chunk, BLOCK_SIZE_F},
+    gfx::{camera::Camera, gui::Gui},
+    input::Input,
+    ray::Ray,
+};
 
 use super::{
     actor::Actor,
-    ecs::{Ecs, System},
+    ecs::{ComponentStore, Ecs, System},
     health::Health,
+    player::Player,
 };
 
 pub struct Fighter {
@@ -50,6 +59,107 @@ impl FighterSystem {
             nearby_entities: HashSet::new(),
         }
     }
+
+    fn get_target(
+        &mut self,
+        entity: usize,
+        chunk: &mut Chunk,
+        input: &mut Input,
+        players: &Option<RefMut<ComponentStore<Player>>>,
+        actors: &mut RefMut<ComponentStore<Actor>>,
+        healths: &RefMut<ComponentStore<Health>>,
+    ) -> Option<usize> {
+        if let Some(ref players) = players {
+            if players.borrow().has(entity) {
+                self.get_target_raycast(entity, chunk, input, actors, healths)
+            } else {
+                self.get_target_proximity(entity, chunk, actors, healths)
+            }
+        } else {
+            self.get_target_proximity(entity, chunk, actors, healths)
+        }
+    }
+
+    fn get_target_proximity(
+        &mut self,
+        entity: usize,
+        chunk: &mut Chunk,
+        actors: &mut RefMut<ComponentStore<Actor>>,
+        healths: &RefMut<ComponentStore<Health>>,
+    ) -> Option<usize> {
+        let actor = actors.borrow_mut().get_mut(entity).unwrap();
+
+        actor.get_nearby_entities(chunk, &mut self.nearby_entities);
+
+        let position = actor.position();
+        let size = actor.size();
+
+        for nearby_entity in &self.nearby_entities {
+            if *nearby_entity == entity {
+                continue;
+            }
+
+            let nearby_actor = match actors.borrow_mut().get(*nearby_entity) {
+                Some(a) => a,
+                None => continue,
+            };
+
+            if !nearby_actor.intersects(position, size) {
+                continue;
+            }
+
+            if healths.has(*nearby_entity) {
+                return Some(*nearby_entity);
+            }
+        }
+
+        None
+    }
+
+    fn get_target_raycast(
+        &mut self,
+        entity: usize,
+        chunk: &mut Chunk,
+        input: &mut Input,
+        actors: &mut RefMut<ComponentStore<Actor>>,
+        healths: &RefMut<ComponentStore<Health>>,
+    ) -> Option<usize> {
+        let actor = actors.borrow_mut().get_mut(entity).unwrap();
+
+        let position = actor.position();
+        let look_y = actor.look_y();
+
+        if input.was_mouse_button_pressed(MouseButton::Left) {
+            let start = position / BLOCK_SIZE_F;
+            let dir = Camera::get_direction_vec(look_y);
+
+            let hit = chunk.raycast(start, dir, 10.0, Some(&mut self.nearby_entities));
+
+            if let Some(hit) = hit {
+                chunk.set_block(false, hit.position.x, hit.position.y, hit.position.z);
+            }
+
+            for hit_entity in &self.nearby_entities {
+                if entity == *hit_entity {
+                    continue;
+                }
+
+                if !healths.has(*hit_entity) {
+                    continue;
+                }
+
+                if let Some(hit_actor) = actors.get(*hit_entity) {
+                    let ray = Ray { position, dir };
+
+                    if ray.intersects(hit_actor.position(), hit_actor.size()) {
+                        return Some(*hit_entity);
+                    }
+                }
+            }
+        }
+
+        None
+    }
 }
 
 impl System for FighterSystem {
@@ -57,7 +167,7 @@ impl System for FighterSystem {
         &mut self,
         ecs: &mut Ecs,
         chunk: &mut Chunk,
-        _input: &mut Input,
+        input: &mut Input,
         _gui: &mut Gui,
         delta_time: f32,
     ) {
@@ -73,39 +183,28 @@ impl System for FighterSystem {
 
         let mut actors = manager.borrow_components::<Actor>().unwrap();
         let mut fighters = manager.borrow_components::<Fighter>().unwrap();
+        let players = manager.borrow_components::<Player>();
         let mut healths = match manager.borrow_components::<Health>() {
             Some(h) => h,
             None => return,
         };
 
         for entity in entity_cache {
-            let actor = actors.borrow_mut().get_mut(*entity).unwrap();
             let fighter = fighters.borrow_mut().get_mut(*entity).unwrap();
 
             fighter.update(delta_time);
 
-            actor.get_nearby_entities(chunk, &mut self.nearby_entities);
-
-            let position = actor.position();
-            let size = actor.size();
-
-            for nearby_entity in &self.nearby_entities {
-                if nearby_entity == entity {
-                    continue;
-                }
-
-                let nearby_actor = match actors.borrow().get(*nearby_entity) {
-                    Some(a) => a,
+            // Find a target actor with health that this entity can hit, AI characters and players
+            // use different methods to find a target.
+            let target =
+                match self.get_target(*entity, chunk, input, &players, &mut actors, &healths) {
+                    Some(t) => t,
                     None => continue,
                 };
 
-                if !nearby_actor.intersects(position, size) {
-                    continue;
-                }
-
-                if let Some(health) = healths.get_mut(*nearby_entity) {
-                    health.take_damage(fighter.get_attack());
-                }
+            if let Some(health) = healths.get_mut(target) {
+                println!("{} hit {}", *entity, target);
+                health.take_damage(fighter.get_attack());
             }
         }
     }

@@ -289,6 +289,8 @@ impl State {
         ecs.manager.add_component_to_entity(player, player_actor);
         ecs.manager.add_component_to_entity(player, Player {});
         ecs.manager
+            .add_component_to_entity(player, Fighter::new(25, 0.25));
+        ecs.manager
             .add_component_to_entity(player, Health::new(100));
         ecs.manager
             .add_component_to_entity(player, HealthDisplay {});
@@ -296,6 +298,7 @@ impl State {
         ecs.manager.add_component_to_entity(enemy, enemy_actor);
         ecs.manager.add_component_to_entity(enemy, ChaseAi::new());
         ecs.manager.add_component_to_entity(enemy, Display::new(1));
+        ecs.manager.add_component_to_entity(enemy, Health::new(50));
         ecs.manager
             .add_component_to_entity(enemy, Fighter::new(10, 0.5));
 

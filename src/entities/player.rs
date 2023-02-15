@@ -6,7 +6,8 @@ use winit::event::{MouseButton, VirtualKeyCode};
 use crate::{
     chunk::{Chunk, BLOCK_SIZE_F},
     gfx::{camera::Camera, gui::Gui},
-    input::Input, ray::Ray,
+    input::Input,
+    ray::Ray,
 };
 
 use super::{
@@ -24,7 +25,9 @@ pub struct PlayerMovementSystem {
 
 impl PlayerMovementSystem {
     pub fn new() -> Self {
-        Self { hit_entities: HashSet::new() }
+        Self {
+            hit_entities: HashSet::new(),
+        }
     }
 }
 
@@ -104,38 +107,6 @@ impl System for PlayerMovementSystem {
                 input.mouse_delta_y() * MOUSE_SENSITIVITY,
                 -input.mouse_delta_x() * MOUSE_SENSITIVITY,
             );
-
-            // TODO: The following should become it's own method on it's own component (maybe part of fighter, maybe not).
-            let position = actor.position();
-            let look_y = actor.look_y();
-
-            if input.was_mouse_button_pressed(MouseButton::Left) {
-                let start = position / BLOCK_SIZE_F;
-                let dir = Camera::get_direction_vec(look_y);
-
-                let hit = chunk.raycast(start, dir, 10.0, Some(&mut self.hit_entities));
-
-                if let Some(hit) = hit {
-                    chunk.set_block(false, hit.position.x, hit.position.y, hit.position.z);
-                }
-
-                for hit_entity in self.hit_entities.iter() {
-                    if *entity == *hit_entity {
-                        continue;
-                    }
-
-                    if let Some(hit_actor) = actors.get(*hit_entity) {
-                        let ray = Ray {
-                            position,
-                            dir,
-                        };
-
-                        if ray.intersects(hit_actor.position(), hit_actor.size()) {
-                            println!("hit: {}", *hit_entity);
-                        }
-                    }
-                }
-            }
         }
     }
 }
