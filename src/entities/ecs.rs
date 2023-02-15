@@ -288,7 +288,7 @@ impl SystemManager {
         self.system_stores.push(Box::new(SystemStore::new(system)));
     }
 
-    pub fn get<T: 'static>(&mut self) -> Option<&T> {
+    pub fn get<T: 'static>(&self) -> Option<&T> {
         for system_store in self.system_stores.iter() {
             if let Some(system_store) = system_store.as_any().downcast_ref::<SystemStore<T>>() {
                 return Some(&system_store.system);

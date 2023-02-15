@@ -1,6 +1,6 @@
 use std::{collections::HashSet, hash::Hash};
 use winit::{
-    event::{ElementState, MouseButton, VirtualKeyCode},
+    event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
     window::{CursorGrabMode, Window},
 };
 
@@ -68,6 +68,32 @@ impl Input {
             mouse_delta_y: 0.0,
             is_focused: false,
         }
+    }
+
+    pub fn process_button(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => {
+                self.key_state_changed(*keycode, *state);
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                self.mouse_button_state_changed(*button, *state);
+            }
+            _ => return false,
+        }
+
+        true
+    }
+
+    pub fn process_mouse_motion(&mut self, delta_x: f32, delta_y: f32) {
+        self.mouse_moved(delta_x, delta_y);
     }
 
     pub fn was_key_pressed(&self, keycode: VirtualKeyCode) -> bool {

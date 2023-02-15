@@ -3,6 +3,7 @@ pub mod cube_mesh;
 pub mod gui;
 pub mod instance;
 pub mod model;
+pub mod renderer;
 pub mod sprite_mesh;
 pub mod texture;
 pub mod texture_array;

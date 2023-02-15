@@ -1,15 +1,5 @@
-use crate::chunk::Chunk;
-use crate::entities::actor::{Actor, ActorSystem};
-use crate::entities::chase_ai::{ChaseAi, ChaseAiSystem};
-use crate::entities::display::Display;
-use crate::entities::ecs::{CommandQueue, Ecs, EntityManager, SystemManager};
-use crate::entities::entity_instances_system::EntityInstancesSystem;
-use crate::entities::fighter::{Fighter, FighterSystem};
-use crate::entities::health::{Health, HealthSystem};
-use crate::entities::health_display::{HealthDisplay, HealthDisplaySystem};
-use crate::entities::player::{Player, PlayerMovementSystem};
+use crate::entities::actor::Actor;
 use crate::gfx::camera::{Camera, CameraOrthographicProjection, CameraPerspectiveProjection};
-use crate::gfx::gui::Gui;
 use crate::gfx::instance::InstanceRaw;
 use crate::gfx::model::Model;
 use crate::gfx::sprite_mesh::{SPRITE_INDICES, SPRITE_VERTICES, UI_SPRITE_VERTICES};
@@ -17,27 +7,21 @@ use crate::gfx::texture::{self, Texture};
 use crate::gfx::texture_array::TextureArray;
 use crate::gfx::vertex::Vertex;
 use crate::input::Input;
-use crate::rng::Rng;
+use crate::simulation::Simulation;
 use cgmath::prelude::*;
-use std::borrow::BorrowMut;
+use std::borrow::Borrow;
 use std::iter::once;
-use std::time::{SystemTime, UNIX_EPOCH};
 use wgpu::Features;
 use winit::dpi::PhysicalSize;
-use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
+use winit::event::{MouseButton, VirtualKeyCode};
 use winit::window::{Fullscreen, Window};
 
 const Z_NEAR: f32 = 0.1;
 const Z_FAR: f32 = 100.0;
 const UI_SCALE: f32 = 28.0;
-const HUMANOID_SIZE: cgmath::Vector3<f32> = cgmath::vec3(1.0, 0.8, 1.0);
 
-// TODO: This struct handles top-level gameplay (connecting input & entities & systems) but also does graphics.
-// maybe the rendering details should be factored out.
-
-pub struct State {
+pub struct Renderer {
     window: Window,
-    input: Input,
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -52,14 +36,9 @@ pub struct State {
     ui_camera: Camera,
     model: Model,
     ui_model: Model,
-    chunk: Chunk,
-    ecs: Ecs,
-    systems: SystemManager,
-    player: usize,
-    gui: Gui,
 }
 
-impl State {
+impl Renderer {
     pub async fn new(window: Window) -> Self {
         let size = window.inner_size();
 
@@ -116,12 +95,12 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("gfx/shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
         let ui_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("gfx/ui_shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("ui_shader.wgsl").into()),
         });
 
         let camera = Camera::new(
@@ -255,67 +234,8 @@ impl State {
         let model = Model::new(&device, SPRITE_VERTICES, SPRITE_INDICES);
         let ui_model = Model::new(&device, UI_SPRITE_VERTICES, SPRITE_INDICES);
 
-        let input = Input::new();
-
-        let mut rng = Rng::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("Inaccurate system time!")
-                .as_millis() as u32,
-        );
-        let mut chunk = Chunk::new();
-        chunk.generate_blocks(&mut rng);
-        chunk.generate_mesh(&device);
-
-        let mut ecs = Ecs {
-            manager: EntityManager::new(),
-            queue: CommandQueue::new(),
-            entity_cache: Vec::new(),
-        };
-
-        let mut player_actor = Actor::new(cgmath::Vector3::zero(), HUMANOID_SIZE, 6.0);
-
-        if let Some(player_spawn) = chunk.get_spawn_position(&mut rng) {
-            player_actor.teleport(player_spawn);
-        }
-
-        let mut enemy_actor = Actor::new(cgmath::Vector3::zero(), HUMANOID_SIZE, 6.0);
-
-        if let Some(enemy_spawn) = chunk.get_spawn_position(&mut rng) {
-            enemy_actor.teleport(enemy_spawn);
-        }
-
-        let player = ecs.manager.add_entity();
-        ecs.manager.add_component_to_entity(player, player_actor);
-        ecs.manager.add_component_to_entity(player, Player {});
-        ecs.manager
-            .add_component_to_entity(player, Fighter::new(25, 0.25));
-        ecs.manager
-            .add_component_to_entity(player, Health::new(100));
-        ecs.manager
-            .add_component_to_entity(player, HealthDisplay {});
-        let enemy = ecs.manager.add_entity();
-        ecs.manager.add_component_to_entity(enemy, enemy_actor);
-        ecs.manager.add_component_to_entity(enemy, ChaseAi::new());
-        ecs.manager.add_component_to_entity(enemy, Display::new(1));
-        ecs.manager.add_component_to_entity(enemy, Health::new(50));
-        ecs.manager
-            .add_component_to_entity(enemy, Fighter::new(10, 0.5));
-
-        let mut systems = SystemManager::new();
-        systems.add_system(ActorSystem {});
-        systems.add_system(ChaseAiSystem {});
-        systems.add_system(PlayerMovementSystem::new());
-        systems.add_system(EntityInstancesSystem::new());
-        systems.add_system(FighterSystem::new());
-        systems.add_system(HealthDisplaySystem {});
-        systems.add_system(HealthSystem {});
-
-        let gui = Gui::new();
-
         Self {
             window,
-            input,
             surface,
             device,
             queue,
@@ -330,16 +250,15 @@ impl State {
             ui_camera,
             model,
             ui_model,
-            chunk,
-            ecs,
-            systems,
-            player,
-            gui,
         }
     }
 
     pub fn window(&self) -> &Window {
         &self.window
+    }
+
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
     }
 
     pub fn size(&self) -> PhysicalSize<u32> {
@@ -365,45 +284,16 @@ impl State {
         );
     }
 
-    pub fn input(&mut self, event: &WindowEvent) -> bool {
-        match event {
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state,
-                        virtual_keycode: Some(keycode),
-                        ..
-                    },
-                ..
-            } => {
-                self.input.key_state_changed(*keycode, *state);
-            }
-            WindowEvent::MouseInput { state, button, .. } => {
-                self.input.mouse_button_state_changed(*button, *state);
-            }
-            _ => return false,
+    pub fn update(&mut self, input: &mut Input, simulation: &mut Simulation) {
+        if input.was_mouse_button_pressed_ignore_focus(MouseButton::Left) {
+            input.set_focused(&self.window, true);
         }
 
-        true
-    }
-
-    pub fn mouse_motion(&mut self, delta_x: f32, delta_y: f32) {
-        self.input.mouse_moved(delta_x, delta_y);
-    }
-
-    pub fn update(&mut self, delta_time: f32) {
-        if self
-            .input
-            .was_mouse_button_pressed_ignore_focus(MouseButton::Left)
-        {
-            self.input.set_focused(&self.window, true);
+        if input.was_key_pressed(VirtualKeyCode::Escape) {
+            input.set_focused(&self.window, false);
         }
 
-        if self.input.was_key_pressed(VirtualKeyCode::Escape) {
-            self.input.set_focused(&self.window, false);
-        }
-
-        if self.input.was_key_pressed(VirtualKeyCode::F11) {
+        if input.was_key_pressed(VirtualKeyCode::F11) {
             if self.window.fullscreen().is_none() {
                 self.window
                     .set_fullscreen(Some(Fullscreen::Borderless(None)));
@@ -412,24 +302,13 @@ impl State {
             }
         }
 
-        self.gui.clear();
-        self.ecs.flush_queue(&mut self.chunk);
-
-        self.systems.update(
-            &mut self.ecs,
-            &mut self.chunk,
-            &mut self.input,
-            &mut self.gui,
-            delta_time,
-        );
-
-        if let Some(player) = self
-            .ecs
+        if let Some(player) = simulation
+            .ecs()
             .manager
             .borrow_components::<Actor>()
             .unwrap()
-            .borrow_mut()
-            .get(self.player)
+            .borrow()
+            .get(simulation.focused_entity())
         {
             self.camera.rotate(player.look_x(), player.look_y());
             self.camera.teleport(player.head_position());
@@ -437,12 +316,11 @@ impl State {
 
         self.camera.update(&self.queue);
         self.ui_camera.update(&self.queue);
-        self.chunk.update_mesh(&self.device);
 
-        self.input.update();
+        simulation.chunk.update_mesh(&self.device);
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, simulation: &Simulation) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture
@@ -484,17 +362,15 @@ impl State {
             render_pass.set_bind_group(0, self.texture_array.bind_group(), &[]);
             render_pass.set_bind_group(1, self.camera.bind_group(), &[]);
 
-            if let Some(model) = &self.chunk.model() {
+            if let Some(model) = simulation.chunk.model() {
                 render_pass.set_vertex_buffer(0, model.vertices().slice(..));
                 render_pass.set_index_buffer(model.indices().slice(..), wgpu::IndexFormat::Uint32);
                 render_pass.set_vertex_buffer(1, model.instances().slice(..));
                 render_pass.draw_indexed(0..model.num_indices(), 0, 0..model.num_instances());
             }
 
-            let entity_instances_system = self.systems.get::<EntityInstancesSystem>().unwrap();
-
             self.model
-                .update_instances(&self.device, entity_instances_system.instances());
+                .update_instances(&self.device, simulation.entity_instances());
             render_pass.set_vertex_buffer(0, self.model.vertices().slice(..));
             render_pass.set_index_buffer(self.model.indices().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.set_vertex_buffer(1, self.model.instances().slice(..));
@@ -539,7 +415,7 @@ impl State {
             render_pass.set_bind_group(1, self.ui_camera.bind_group(), &[]);
 
             self.ui_model
-                .update_instances(&self.device, self.gui.instances());
+                .update_instances(&self.device, simulation.gui_instances());
             render_pass.set_vertex_buffer(0, self.ui_model.vertices().slice(..));
             render_pass
                 .set_index_buffer(self.ui_model.indices().slice(..), wgpu::IndexFormat::Uint32);
