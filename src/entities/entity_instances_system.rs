@@ -1,8 +1,8 @@
-use std::borrow::BorrowMut;
+use std::borrow::{BorrowMut, Borrow};
 
 use crate::{
     chunk::Chunk,
-    gfx::{gui::Gui, instance::Instance},
+    gfx::{gui::Gui, instance::Instance, camera::get_look_direction},
     input::Input,
 };
 use cgmath::prelude::*;
@@ -54,20 +54,18 @@ impl System for EntityInstancesSystem {
 
         self.entity_instances.clear();
 
-        let player_position = manager
-            .borrow_components::<Actor>()
-            .unwrap()
-            .borrow_mut()
-            .get(player)
-            .unwrap()
-            .position();
-
         if !manager.get_entities_with_both::<Display, Actor>(entity_cache) {
             return;
         }
 
         let mut displays = manager.borrow_components::<Display>().unwrap();
         let mut actors = manager.borrow_components::<Actor>().unwrap();
+
+        let player_actor = actors.borrow()
+            .get(player)
+            .unwrap();
+
+        let player_look_direction = get_look_direction(player_actor.look_x(), player_actor.look_y());
 
         for entity in entity_cache {
             let display = displays.borrow_mut().get(*entity).unwrap();
@@ -79,7 +77,7 @@ impl System for EntityInstancesSystem {
                 tex_index: display.tex_index(),
             };
 
-            instance.rotate_towards(&player_position);
+            instance.billboard(player_look_direction);
 
             self.entity_instances.push(instance);
         }

@@ -112,6 +112,14 @@ fn get_aspect(width: u32, height: u32) -> f32 {
     width as f32 / height as f32
 }
 
+pub fn get_look_direction(look_x: f32, look_y: f32) -> cgmath::Vector3<f32> {
+    let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(look_y));
+    let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(look_x));
+    let rot = y_rot * x_rot;
+
+    rot * cgmath::Vector3::unit_z()
+}
+
 pub struct CameraPerspectiveProjection {
     eye: cgmath::Vector3<f32>,
     look: cgmath::Vector3<f32>,
@@ -173,11 +181,7 @@ impl CameraProjection for CameraPerspectiveProjection {
     fn rotate(&mut self, look_x: f32, look_y: f32) {
         self.look_x = look_x;
         self.look_y = look_y;
-
-        let y_rot = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.look_y));
-        let x_rot = cgmath::Matrix3::from_angle_x(cgmath::Deg(self.look_x));
-        let rot = y_rot * x_rot;
-        self.look = rot * cgmath::Vector3::unit_z();
+        self.look = get_look_direction(self.look_x, self.look_y);
     }
 
     fn position(&self) -> cgmath::Vector3<f32> {

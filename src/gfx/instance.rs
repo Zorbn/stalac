@@ -20,6 +20,12 @@ impl Instance {
         let angle = cgmath::Rad((target.x - self.position.x).atan2(target.z - self.position.z));
         self.rotation = cgmath::Quaternion::from_angle_y(angle);
     }
+
+    pub fn billboard(&mut self, look: cgmath::Vector3<f32>) {
+        let inverse_look = -look;
+        let angle = inverse_look.x.atan2(inverse_look.z);
+        self.rotation = cgmath::Quaternion::new((angle * 0.5).cos(), 0.0, 1.0 * (angle * 0.5).sin(), 0.0);
+    }
 }
 
 #[repr(C)]
