@@ -302,6 +302,8 @@ impl Renderer {
             }
         }
 
+        input.update_gui_mouse_position(UI_SCALE, self.config.height);
+
         if let Some(player) = simulation
             .ecs()
             .manager

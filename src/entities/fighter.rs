@@ -199,7 +199,6 @@ impl System for FighterSystem {
                 };
 
             if let Some(health) = healths.get_mut(target) {
-                println!("{} hit {}", *entity, target);
                 health.take_damage(fighter.get_attack());
             }
         }

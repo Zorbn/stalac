@@ -31,18 +31,21 @@ impl Gui {
         self.write_line = 0.0;
     }
 
-    pub fn write(&mut self, text: &str) {
+    pub fn write(&mut self, text: &str) -> f32 {
+        let write_line = self.write_line;
+        self.write_line += 1.0;
+
         for (i, char) in text.chars().enumerate() {
             if let Some(char_index) = self.characters.get(&char) {
                 self.glyph_instances.push(Instance {
-                    position: cgmath::vec3(i as f32 * UI_SPRITE_WIDTH, self.write_line, 0.0),
+                    position: cgmath::vec3(i as f32 * UI_SPRITE_WIDTH, write_line, 0.0),
                     rotation: cgmath::Quaternion::zero(),
                     tex_index: *char_index,
                 })
             }
         }
 
-        self.write_line += 1.0;
+        write_line
     }
 
     pub fn instances(&self) -> &Vec<Instance> {

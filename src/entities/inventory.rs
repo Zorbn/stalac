@@ -1,6 +1,13 @@
-use std::{borrow::{Borrow, BorrowMut}, collections::HashSet};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    collections::HashSet,
+};
 
-use super::{ecs::{System, Ecs}, actor::Actor, item::Item};
+use super::{
+    actor::Actor,
+    ecs::{Ecs, System},
+    item::Item,
+};
 
 pub struct Inventory {
     items: Vec<char>,
@@ -13,7 +20,18 @@ impl Inventory {
 
     // TODO: Make item components return the parameters for this function.
     pub fn add_item(&mut self) {
-        self.items.push('a');
+        let c = if self.items.len() % 2 == 0 {
+            'a'
+        } else {
+            'b'
+        };
+        self.items.push(c);
+    }
+
+    pub fn remove_item(&mut self, index: usize) {
+        if index < self.items().len() {
+            self.items.remove(index);
+        }
     }
 
     pub fn items(&self) -> &Vec<char> {
