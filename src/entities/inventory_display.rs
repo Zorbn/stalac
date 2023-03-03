@@ -50,7 +50,6 @@ impl System for InventoryDisplaySystem {
                 self.string.push(*item);
             }
 
-
             let height = gui.write(&self.string);
             let mouse_position = input.gui_mouse_position();
             if mouse_position.y >= height && mouse_position.y <= height + 1.0 {

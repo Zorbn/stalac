@@ -41,9 +41,9 @@ fn get_neighbors(
         let dir = index_to_dir(dir_i);
         let dir_offset = dir_to_offset(dir);
         let neighbor_position = cgmath::Vector3::<i32>::new(
-            position.x + dir_offset.0,
-            position.y + dir_offset.1,
-            position.z + dir_offset.2,
+            position.x + dir_offset[0],
+            position.y + dir_offset[1],
+            position.z + dir_offset[2],
         );
         if chunk.get_block(
             neighbor_position.x,

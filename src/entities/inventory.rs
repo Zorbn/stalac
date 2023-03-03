@@ -20,11 +20,7 @@ impl Inventory {
 
     // TODO: Make item components return the parameters for this function.
     pub fn add_item(&mut self) {
-        let c = if self.items.len() % 2 == 0 {
-            'a'
-        } else {
-            'b'
-        };
+        let c = if self.items.len() % 2 == 0 { 'a' } else { 'b' };
         self.items.push(c);
     }
 

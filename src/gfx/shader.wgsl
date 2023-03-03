@@ -1,9 +1,9 @@
 struct InstanceInput {
-    @location(3) model_matrix_0: vec4<f32>,
-    @location(4) model_matrix_1: vec4<f32>,
-    @location(5) model_matrix_2: vec4<f32>,
-    @location(6) model_matrix_3: vec4<f32>,
-    @location(7) tex_index: u32,
+    @location(4) model_matrix_0: vec4<f32>,
+    @location(5) model_matrix_1: vec4<f32>,
+    @location(6) model_matrix_2: vec4<f32>,
+    @location(7) model_matrix_3: vec4<f32>,
+    @location(8) tex_index: u32,
 };
 
 struct CameraUniform {
@@ -15,14 +15,16 @@ var<uniform> camera: CameraUniform;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
-    @location(2) tex_index: u32,
+    @location(2) color: vec3<f32>,
+    @location(3) tex_index: u32,
 }
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) tex_coords: vec2<f32>,
     @location(1) tex_index: u32,
-    @location(2) light_level: f32,
+    @location(2) vertex_color: vec3<f32>,
+    @location(3) light_level: f32,
 }
 
 @vertex
@@ -42,6 +44,7 @@ fn vs_main(
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
     out.tex_index = instance.tex_index + model.tex_index;
+    out.vertex_color = model.color;
     out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
     out.light_level = distance(out.clip_position.xyz, light_pos);
     return out;
@@ -60,7 +63,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let lit_color = vec4(color.rgb / (abs(in.light_level) + 1.0), color.a);
+    let lit_color = vec4(in.vertex_color * color.rgb / (abs(in.light_level) + 1.0), color.a);
 
     return lit_color;
 }

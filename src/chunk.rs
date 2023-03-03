@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::direction::{dir_to_offset, index_to_dir};
+use crate::direction::{dir_outward_component, dir_to_offset, index_to_dir, Direction};
 use crate::gfx::cube_mesh::{CUBE_INDICES, CUBE_VERTICES};
 use crate::gfx::instance::Instance;
 use crate::gfx::model::Model;
@@ -22,12 +22,19 @@ pub struct RaycastHit {
     pub last_position: cgmath::Vector3<i32>,
 }
 
+struct VertexNeighbors {
+    side1: bool,
+    side2: bool,
+    corner: bool,
+}
+
 pub struct Chunk {
     model: Option<Model>,
     blocks: [bool; CHUNK_LEN],
     entities_on_blocks: Vec<HashSet<usize>>,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
+    ao_buffer: [i32; 4],
     is_dirty: bool,
 }
 
@@ -45,6 +52,7 @@ impl Chunk {
             model: None,
             vertices: Vec::new(),
             indices: Vec::new(),
+            ao_buffer: [0; 4],
             is_dirty: false,
         }
     }
@@ -68,15 +76,15 @@ impl Chunk {
             }
         }
 
-        // for z in 0..CHUNK_SIZE {
-        //     for x in 0..CHUNK_SIZE {
-        //         if rng.range(100) > 10 {
-        //             continue;
-        //         }
+        for z in 0..CHUNK_SIZE {
+            for x in 0..CHUNK_SIZE {
+                if rng.range(100) > 10 {
+                    continue;
+                }
 
-        //         self.set_block(true, x as i32, 1, z as i32);
-        //     }
-        // }
+                self.set_block(true, x as i32, 1, z as i32);
+            }
+        }
     }
 
     pub fn update_mesh(&mut self, device: &wgpu::Device) {
@@ -107,7 +115,11 @@ impl Chunk {
                     for dir_i in 0..6 {
                         let dir = index_to_dir(dir_i);
                         let dir_offset = dir_to_offset(dir);
-                        if self.get_block(ix + dir_offset.0, iy + dir_offset.1, iz + dir_offset.2) {
+                        if self.get_block(
+                            ix + dir_offset[0],
+                            iy + dir_offset[1],
+                            iz + dir_offset[2],
+                        ) {
                             continue;
                         }
 
@@ -118,12 +130,31 @@ impl Chunk {
                             vert.position[0] = (vert.position[0] + ix as f32) * BLOCK_SIZE_F;
                             vert.position[1] = (vert.position[1] + iy as f32) * BLOCK_SIZE_F;
                             vert.position[2] = (vert.position[2] + iz as f32) * BLOCK_SIZE_F;
+
+                            let neighbors = self.check_vertex_neighbors(
+                                [ix, iy, iz],
+                                [
+                                    CUBE_VERTICES[dir_i][vert_i].position[0] as i32,
+                                    CUBE_VERTICES[dir_i][vert_i].position[1] as i32,
+                                    CUBE_VERTICES[dir_i][vert_i].position[2] as i32,
+                                ],
+                                dir,
+                            );
+                            let ao = Chunk::calculate_ao_level(neighbors);
+                            self.ao_buffer[vert_i] = ao;
+                            let ao_light_value = ao as f32 * 0.33;
+                            vert.color[0] = ao_light_value;
+                            vert.color[1] = ao_light_value;
+                            vert.color[2] = ao_light_value;
+
                             self.vertices.push(vert);
                         }
 
                         for ind_i in 0..6 {
                             self.indices.push(CUBE_INDICES[dir_i][ind_i] + vert_count);
                         }
+
+                        self.orient_last_face();
                     }
                 }
             }
@@ -357,5 +388,85 @@ impl Chunk {
         let uz = z as usize;
 
         Some(self.entities_on_blocks[ux + uz * CHUNK_SIZE].iter())
+    }
+
+    fn calculate_ao_level(neighbors: VertexNeighbors) -> i32 {
+        if neighbors.side1 && neighbors.side2 {
+            return 0;
+        }
+
+        let mut occupied = 0;
+
+        if neighbors.side1 {
+            occupied += 1;
+        }
+
+        if neighbors.side2 {
+            occupied += 1;
+        }
+
+        if neighbors.corner {
+            occupied += 1;
+        }
+
+        3 - occupied
+    }
+
+    fn check_vertex_neighbors(
+        &self,
+        world_position: [i32; 3],
+        vertex_position: [i32; 3],
+        direction: Direction,
+    ) -> VertexNeighbors {
+        let direction_corner = [
+            vertex_position[0] * 2 - 1,
+            vertex_position[1] * 2 - 1,
+            vertex_position[2] * 2 - 1,
+        ];
+
+        let outward_component = dir_outward_component(direction);
+        let mut direction_side1 = direction_corner;
+        direction_side1[((outward_component + 2) % 3) as usize] = 0;
+        let mut direction_side2 = direction_corner;
+        direction_side2[((outward_component + 1) % 3) as usize] = 0;
+
+        let side1_position = [
+            world_position[0] + direction_side1[0],
+            world_position[1] + direction_side1[1],
+            world_position[2] + direction_side1[2],
+        ];
+        let side2_position = [
+            world_position[0] + direction_side2[0],
+            world_position[1] + direction_side2[1],
+            world_position[2] + direction_side2[2],
+        ];
+        let corner_position = [
+            world_position[0] + direction_corner[0],
+            world_position[1] + direction_corner[1],
+            world_position[2] + direction_corner[2],
+        ];
+
+        VertexNeighbors {
+            side1: self.get_block(side1_position[0], side1_position[1], side1_position[2]),
+            side2: self.get_block(side2_position[0], side2_position[1], side2_position[2]),
+            corner: self.get_block(corner_position[0], corner_position[1], corner_position[2]),
+        }
+    }
+
+    fn orient_last_face(&mut self) {
+        let face_start = self.vertices.len() - 4;
+        let v0 = self.vertices[face_start];
+        let v1 = self.vertices[face_start + 1];
+        let v2 = self.vertices[face_start + 2];
+        let v3 = self.vertices[face_start + 3];
+
+        if self.ao_buffer[0] + self.ao_buffer[2] > self.ao_buffer[1] + self.ao_buffer[3] {
+            return;
+        }
+
+        self.vertices[face_start] = v3;
+        self.vertices[face_start + 1] = v0;
+        self.vertices[face_start + 2] = v1;
+        self.vertices[face_start + 3] = v2;
     }
 }

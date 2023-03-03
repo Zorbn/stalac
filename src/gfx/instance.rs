@@ -24,7 +24,8 @@ impl Instance {
     pub fn billboard(&mut self, look: cgmath::Vector3<f32>) {
         let inverse_look = -look;
         let angle = inverse_look.x.atan2(inverse_look.z);
-        self.rotation = cgmath::Quaternion::new((angle * 0.5).cos(), 0.0, 1.0 * (angle * 0.5).sin(), 0.0);
+        self.rotation =
+            cgmath::Quaternion::new((angle * 0.5).cos(), 0.0, 1.0 * (angle * 0.5).sin(), 0.0);
     }
 }
 
@@ -45,28 +46,28 @@ impl InstanceRaw {
                 // A mat4, made of four vec4s:
                 wgpu::VertexAttribute {
                     offset: 0,
-                    shader_location: 3,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
                     shader_location: 4,
                     format: wgpu::VertexFormat::Float32x4,
                 },
                 wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
                     shader_location: 5,
                     format: wgpu::VertexFormat::Float32x4,
                 },
                 wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
+                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
                     shader_location: 6,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
+                    shader_location: 7,
                     format: wgpu::VertexFormat::Float32x4,
                 },
                 // Texture index:
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
-                    shader_location: 7,
+                    shader_location: 8,
                     format: wgpu::VertexFormat::Uint32,
                 },
             ],

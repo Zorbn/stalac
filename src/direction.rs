@@ -20,13 +20,24 @@ pub fn index_to_dir(i: usize) -> Direction {
     }
 }
 
-pub fn dir_to_offset(dir: Direction) -> (i32, i32, i32) {
+pub fn dir_to_offset(dir: Direction) -> [i32; 3] {
     match dir {
-        Direction::Up => (0, 1, 0),
-        Direction::Down => (0, -1, 0),
-        Direction::Forward => (0, 0, -1),
-        Direction::Backward => (0, 0, 1),
-        Direction::Left => (-1, 0, 0),
-        Direction::Right => (1, 0, 0),
+        Direction::Up => [0, 1, 0],
+        Direction::Down => [0, -1, 0],
+        Direction::Forward => [0, 0, -1],
+        Direction::Backward => [0, 0, 1],
+        Direction::Left => [-1, 0, 0],
+        Direction::Right => [1, 0, 0],
+    }
+}
+
+pub fn dir_outward_component(dir: Direction) -> i32 {
+    match dir {
+        Direction::Up => 1,
+        Direction::Down => 1,
+        Direction::Forward => 2,
+        Direction::Backward => 2,
+        Direction::Left => 0,
+        Direction::Right => 0,
     }
 }

@@ -1,8 +1,8 @@
-use std::borrow::{BorrowMut, Borrow};
+use std::borrow::{Borrow, BorrowMut};
 
 use crate::{
     chunk::Chunk,
-    gfx::{gui::Gui, instance::Instance, camera::get_look_direction},
+    gfx::{camera::get_look_direction, gui::Gui, instance::Instance},
     input::Input,
 };
 use cgmath::prelude::*;
@@ -61,11 +61,10 @@ impl System for EntityInstancesSystem {
         let mut displays = manager.borrow_components::<Display>().unwrap();
         let mut actors = manager.borrow_components::<Actor>().unwrap();
 
-        let player_actor = actors.borrow()
-            .get(player)
-            .unwrap();
+        let player_actor = actors.borrow().get(player).unwrap();
 
-        let player_look_direction = get_look_direction(player_actor.look_x(), player_actor.look_y());
+        let player_look_direction =
+            get_look_direction(player_actor.look_x(), player_actor.look_y());
 
         for entity in entity_cache {
             let display = displays.borrow_mut().get(*entity).unwrap();
